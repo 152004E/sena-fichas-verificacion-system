@@ -1,4 +1,4 @@
-# 🚀 SENA Fichas Manager
+# 🚀 SENA Fichas Verificación System
 
 ## 🧠 📊 Resumen del Sistema
 
@@ -86,33 +86,44 @@ En una primera versión:
 ## 📁 Estructura del Proyecto
 
 ```
-sena-fichas-manager/
+sena-fichas-verificacion-system/
 │
 ├── .git/                                        # Control de versiones
 │
 ├── src/
 │   └── main/
-│       └── java/
-│           ├── app/
-│           │   └── Main.java                    # Punto de entrada de la app
-│           │
-│           ├── database/
-│           │   └── DatabaseManager.java         # Gestión de SQLite
-│           │
-│           ├── excel/
-│           │   └── ExcelReader.java             # Lectura de archivos Excel
-│           │
-│           ├── service/
-│           │   └── SyncService.java             # Lógica de sincronización
-│           │
-│           └── ui/
-│               └── MainWindow.java              # Interfaz gráfica (JavaFX)
-│
-├── resources/
-│   └── config.properties                        # Configuración de la app
+│       ├── java/
+│       │   ├── app/
+│       │   │   └── Main.java                    # Punto de entrada de la app
+│       │   │
+│       │   ├── database/
+│       │   │   └── DatabaseManager.java         # Gestión de SQLite
+│       │   │
+│       │   ├── Model/
+│       │   │   ├── Ficha.java                   # Entidad Ficha
+│       │   │   ├── Instructor.java              # Entidad Instructor
+│       │   │   ├── Programa.java                # Entidad Programa
+│       │   │   └── EstadoFicha.java             # Enum Estado (Completa, Incompleta, Errores)
+│       │   │
+│       │   ├── excel/
+│       │   │   └── (ExcelReader.java próximamente)  # Lectura de archivos Excel
+│       │   │
+│       │   ├── service/
+│       │   │   └── (SyncService.java próximamente)  # Lógica de sincronización
+│       │   │
+│       │   └── ui/
+│       │       └── MainWindow.java              # Interfaz gráfica (JavaFX)
+│       │
+│       └── resources/
+│           └── config.properties                # Configuración de la app
 │
 ├── data/
 │   └── .gitkeep                                 # Mantener carpeta en git (datos.db se genera)
+│
+├── target/                                      # Archivos compilados y empaquetados
+│   ├── classes/
+│   ├── generated-sources/
+│   └── maven-status/
 │
 ├── pom.xml                                      # Dependencias Maven
 │
@@ -227,10 +238,10 @@ El sistema **NO reemplaza el Excel**, sino que lo **potencia**:
 ## 🚀 🪜 Fases de Desarrollo
 
 ### 🥇 FASE 0 — Configurar el entorno
-- [ ] Instalar Java 11+
-- [ ] Instalar Maven 3.6+
-- [ ] Clonar el repositorio
-- [ ] Ejecutar `mvn clean compile`
+- [x] Instalar Java 11+
+- [x] Instalar Maven 3.6+
+- [x] Clonar el repositorio
+- [x] Ejecutar `mvn clean compile`
 
 ### 🥇 FASE 1 — Entender el Excel
 - [ ] Identificar hojas y columnas
@@ -239,29 +250,30 @@ El sistema **NO reemplaza el Excel**, sino que lo **potencia**:
 - [ ] Crear modelo de datos definitivo
 
 ### 🥈 FASE 2 — Diseñar el modelo de datos
-- [ ] Crear clases Java (Ficha, Programa, Instructor, Competencia, etc.)
+- [x] Crear clases Java (Ficha, Instructor, Programa, EstadoFicha)
 - [ ] Diseñar tablas SQLite
-- [ ] Definir relaciones
+- [ ] Definir relaciones y crear Competencia.java y FichaCompetencia.java
+- [ ] Validaciones en las entidades
 
 ### 🥉 FASE 3 — Descargar desde SharePoint
 - [ ] Obtener URL directa del Excel
 - [ ] Implementar descarga con Java
 
-### 🏅 FASE 4 — Leer el Excel
+### 🏅 FASE 4 — Leer el Excel (ExcelReader.java)
 - [ ] Usar Apache POI
 - [ ] Convertir filas en objetos Java
 
-### 🏅 FASE 5 — Procesar lógica
+### 🏅 FASE 5 — Procesar lógica (SyncService.java)
 - [ ] Validar competencias
 - [ ] Detectar faltantes
-- [ ] Calcular estado
+- [ ] Calcular estado automático
 
-### 🏅 FASE 6 — Guardar en SQLite
+### 🏅 FASE 6 — Guardar en SQLite (DatabaseManager.java)
 - [ ] Crear tablas
 - [ ] Persistir datos
 - [ ] Optimizar consultas
 
-### 🏅 FASE 7 — Crear interfaz (JavaFX)
+### 🏅 FASE 7 — Crear interfaz (MainWindow.java - JavaFX)
 - [ ] Pantalla principal
 - [ ] Vista de fichas (tabla)
 - [ ] Detalle de ficha
@@ -269,7 +281,7 @@ El sistema **NO reemplaza el Excel**, sino que lo **potencia**:
 
 ### 🏅 FASE 8 — Exportar resultados
 - [ ] Generar Excel nuevo
-- [ ] Crear reportes
+- [ ] Crear reportes en PDF o Excel
 
 ---
 
@@ -396,14 +408,30 @@ mvn clean package
 
 ---
 
-## 📝 Próximos Pasos
+## � Estado Actual del Proyecto
 
-1. **Analizar el Excel** y documentar su estructura
-2. **Crear el modelo de datos** (clases Java)
-3. **Configurar la base de datos** (SQLite)
-4. **Implementar lectura del Excel** (POI)
-5. **Desarrollar la lógica** de validación
-6. **Crear la interfaz gráfica** (JavaFX)
+### ✅ Implementado
+- Estructura Maven configurada
+- Clases modelo base (Ficha.java, Instructor.java, Programa.java, EstadoFicha.java)
+- Punto de entrada (Main.java)
+- Estructura base de interfaz (MainWindow.java)
+- DatabaseManager.java creado
+
+### 🔄 En Desarrollo
+- Completar modelo de datos (Competencia, FichaCompetencia)
+- Implementar DatabaseManager con SQLite
+- Crear ExcelReader para lectura de archivos
+- Desarrollar SyncService para la lógica de validación
+
+### 📋 Próximos Pasos
+
+1. **Examinar el Excel** original para documentar su estructura exacta
+2. **Completar el modelo de datos** (agregar Competencia.java y FichaCompetencia.java)
+3. **Implementar DatabaseManager** (crear tablas y conexión a SQLite)
+4. **Desarrollar ExcelReader** (usar Apache POI para leer datos)
+5. **Codificar SyncService** (validación y procesamiento de datos)
+6. **Diseñar MainWindow** (interfaz gráfica con JavaFX)
+7. **Crear módulo de reportes** (exportar resultados)
 
 ---
 

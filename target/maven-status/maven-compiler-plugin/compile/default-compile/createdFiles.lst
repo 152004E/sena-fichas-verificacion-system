@@ -1,0 +1,11 @@
+excel\LocalExcelSource.class
+Model\Instructor.class
+ui\MainWindow.class
+Model\Programa.class
+excel\ExcelReader.class
+excel\ExcelSource.class
+Model\Ficha.class
+app\Main.class
+Model\EstadoFicha.class
+database\DatabaseManager.class
+service\SyncService.class
