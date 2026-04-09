@@ -88,6 +88,8 @@ En una primera versión:
 ```
 sena-fichas-manager/
 │
+├── .git/                                        # Control de versiones
+│
 ├── src/
 │   └── main/
 │       └── java/
@@ -109,10 +111,10 @@ sena-fichas-manager/
 ├── resources/
 │   └── config.properties                        # Configuración de la app
 │
-├── pom.xml                                      # Dependencias Maven
-│
 ├── data/
-│   └── datos.db                                 # Base de datos SQLite (generada)
+│   └── .gitkeep                                 # Mantener carpeta en git (datos.db se genera)
+│
+├── pom.xml                                      # Dependencias Maven
 │
 └── README.md                                    # Este archivo
 ```
