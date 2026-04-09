@@ -1,4 +1,4 @@
-package model;
+package Model;
 
 /**
  * Representa una ficha SENA.

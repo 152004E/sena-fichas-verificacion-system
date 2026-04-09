@@ -1,4 +1,4 @@
-package model;
+package Model;
 
 /**
  * Representa un instructor SENA.

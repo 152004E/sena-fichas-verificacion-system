@@ -1,4 +1,4 @@
-package model;
+package Model;
 
 public enum EstadoFicha {
     EN_EJECUCION("En ejecucion"),
