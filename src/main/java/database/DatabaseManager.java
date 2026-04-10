@@ -27,41 +27,41 @@ public class DatabaseManager {
 
     private void crearTablas() throws SQLException {
         String sqlPrograma = """
-            CREATE TABLE IF NOT EXISTS PROGRAMA (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL,
-                nivel TEXT,
-                codigo INTEGER,
-                version INTEGER,
-                transversales TEXT
-            )
-        """;
+                    CREATE TABLE IF NOT EXISTS PROGRAMA (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nombre TEXT NOT NULL,
+                        nivel TEXT,
+                        codigo INTEGER,
+                        version INTEGER,
+                        transversales TEXT
+                    )
+                """;
 
         String sqlFicha = """
-            CREATE TABLE IF NOT EXISTS FICHA (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                numero INTEGER NOT NULL,
-                nivel TEXT,
-                aprendices INTEGER,
-                programa TEXT,
-                fecha_inicio TEXT,
-                fecha_fin_lec TEXT,
-                fecha_fin TEXT,
-                instructor_tecnico_2025 TEXT,
-                instructor_bilinguismo TEXT,
-                instructor_tecnico_2026 TEXT,
-                transversales_faltantes TEXT,
-                estado TEXT
-            )
-        """;
+                    CREATE TABLE IF NOT EXISTS FICHA (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        numero INTEGER NOT NULL,
+                        nivel TEXT,
+                        aprendices INTEGER,
+                        programa TEXT,
+                        fecha_inicio TEXT,
+                        fecha_fin_lec TEXT,
+                        fecha_fin TEXT,
+                        instructor_tecnico_2025 TEXT,
+                        instructor_bilinguismo TEXT,
+                        instructor_tecnico_2026 TEXT,
+                        transversales_faltantes TEXT,
+                        estado TEXT
+                    )
+                """;
 
         String sqlInstructor = """
-            CREATE TABLE IF NOT EXISTS INSTRUCTOR (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                nombre TEXT NOT NULL,
-                tipo TEXT
-            )
-        """;
+                    CREATE TABLE IF NOT EXISTS INSTRUCTOR (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        nombre TEXT NOT NULL,
+                        tipo TEXT
+                    )
+                """;
 
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(sqlPrograma);
@@ -73,12 +73,12 @@ public class DatabaseManager {
 
     public void insertarFicha(Ficha f) throws SQLException {
         String sql = """
-            INSERT INTO FICHA (numero, nivel, aprendices, programa,
-                fecha_inicio, fecha_fin_lec, fecha_fin,
-                instructor_tecnico_2025, instructor_bilinguismo,
-                instructor_tecnico_2026, transversales_faltantes, estado)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-        """;
+                    INSERT INTO FICHA (numero, nivel, aprendices, programa,
+                        fecha_inicio, fecha_fin_lec, fecha_fin,
+                        instructor_tecnico_2025, instructor_bilinguismo,
+                        instructor_tecnico_2026, transversales_faltantes, estado)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, f.getNumero());
             ps.setString(2, f.getNivel());
@@ -106,6 +106,32 @@ public class DatabaseManager {
             stmt.execute("DELETE FROM FICHA");
             System.out.println("🗑️ Fichas eliminadas");
         }
+    }
+
+    public int contarFichasPorEstado(String estado) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM FICHA WHERE estado = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, estado);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    public int contarFichas() throws SQLException {
+        String sql = "SELECT COUNT(*) FROM FICHA";
+        try (Statement stmt = connection.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        }
+        return 0;
     }
 
     public Connection getConnection() {

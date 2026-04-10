@@ -88,46 +88,45 @@ En una primera versión:
 ```
 sena-fichas-verificacion-system/
 │
-├── .git/                                        # Control de versiones
+├── .git/                                        # Control de versiones del repositorio
 │
 ├── src/
 │   └── main/
 │       ├── java/
 │       │   ├── app/
-│       │   │   └── Main.java                    # Punto de entrada de la app
+│       │   │   └── Main.java                    # Clase principal y arranque de la aplicación
 │       │   │
 │       │   ├── database/
-│       │   │   └── DatabaseManager.java         # Gestión de SQLite
+│       │   │   └── DatabaseManager.java        # Acceso y gestión de la base de datos SQLite
 │       │   │
 │       │   ├── Model/
-│       │   │   ├── Ficha.java                   # Entidad Ficha
-│       │   │   ├── Instructor.java              # Entidad Instructor
-│       │   │   ├── Programa.java                # Entidad Programa
-│       │   │   └── EstadoFicha.java             # Enum Estado (Completa, Incompleta, Errores)
+│       │   │   ├── Ficha.java                   # Modelo de ficha
+│       │   │   ├── Instructor.java              # Modelo de instructor
+│       │   │   ├── Programa.java                # Modelo de programa
+│       │   │   └── EstadoFicha.java             # Enumeración de estados de ficha
 │       │   │
 │       │   ├── excel/
-│       │   │   └── (ExcelReader.java próximamente)  # Lectura de archivos Excel
+│       │   │   └── (ExcelReader.java próximamente) # Lector de archivos Excel
 │       │   │
 │       │   ├── service/
-│       │   │   └── (SyncService.java próximamente)  # Lógica de sincronización
+│       │   │   └── (SyncService.java próximamente) # Lógica de sincronización de datos
 │       │   │
 │       │   └── ui/
-│       │       └── MainWindow.java              # Interfaz gráfica (JavaFX)
+│       │       └── MainWindow.java              # Interfaz gráfica con JavaFX
 │       │
 │       └── resources/
-│           └── config.properties                # Configuración de la app
+│           └── config.properties               # Configuración de la aplicación
 │
 ├── data/
-│   └── .gitkeep                                 # Mantener carpeta en git (datos.db se genera)
+│   └── .gitkeep                                # Carpeta de datos persistentes
 │
-├── target/                                      # Archivos compilados y empaquetados
+├── target/                                      # Salida de compilación Maven
 │   ├── classes/
 │   ├── generated-sources/
 │   └── maven-status/
 │
-├── pom.xml                                      # Dependencias Maven
-│
-└── README.md                                    # Este archivo
+├── pom.xml                                     # Archivo de configuración y dependencias Maven
+└── README.md                                   # Documentación del proyecto
 ```
 
 ---
