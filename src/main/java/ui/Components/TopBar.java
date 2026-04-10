@@ -33,9 +33,10 @@ public class TopBar {
 
     public HBox build() {
         // ── Tabs ─────────────────────────────────────────────────
-        Label tabFichas    = buildTab("SENA Fichas", "consult");
-        Label tabDashboard = buildTab("Dashboard",   "dashboard");
-        Label tabSync      = buildTab("Sync Status", "alarms");
+        Label tabFichas    = buildTab("", "consult");
+        Label tabDashboard = buildTab("Panel",       "dashboard");
+        Label tabSync      = buildTab("Estado", "alarms");
+
         tabs.put("consult",   tabFichas);
         tabs.put("dashboard", tabDashboard);
         tabs.put("alarms",    tabSync);
@@ -47,9 +48,9 @@ public class TopBar {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        // ── Search ───────────────────────────────────────────────
+        // ── Buscador ─────────────────────────────────────────────
         TextField search = new TextField();
-        search.setPromptText("Search ficha number...");
+        search.setPromptText("Buscar número de ficha...");
         search.setPrefWidth(170);
         search.setStyle(
             "-fx-background-color: #1e2230; -fx-text-fill: #c8ccd8;" +
@@ -67,7 +68,7 @@ public class TopBar {
             "-fx-background-radius: 8; -fx-padding: 6 8 6 8;"
         );
 
-        // ── Sync icon ────────────────────────────────────────────
+        // ── Icono sincronizar ────────────────────────────────────
         Label syncIcon = new Label("↻");
         syncIcon.setStyle(
             "-fx-background-color: #1e2230; -fx-text-fill: #6b7280;" +

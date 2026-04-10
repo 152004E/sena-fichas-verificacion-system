@@ -37,77 +37,79 @@ public class ConsultFichasView extends VBox {
     }
 
     // ── Hero banner con número de ficha ─────────────────────────
-    private HBox buildHeroBanner() {
-        Label fichaNum = new Label("Ficha: —");
-        fichaNum.setStyle(
-            "-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;"
-        );
+private HBox buildHeroBanner() {
+    Label fichaNum = new Label("Ficha: —");
+    fichaNum.setStyle(
+        "-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: white;"
+    );
 
-        Label desc = new Label("Detailed verification of academic progress and instructor assignment.");
-        desc.setStyle("-fx-font-size: 11.5px; -fx-text-fill: rgba(255,255,255,0.65); -fx-wrap-text: true;");
-        desc.setMaxWidth(280);
+    Label desc = new Label("Verificación detallada del progreso académico y la asignación de instructores.");
+    desc.setStyle("-fx-font-size: 11.5px; -fx-text-fill: rgba(255,255,255,0.65); -fx-wrap-text: true;");
+    desc.setMaxWidth(280);
 
-        Label tagEstado = new Label("En ejecución");
-        tagEstado.setStyle(
-            "-fx-background-color: rgba(57,169,0,0.25); -fx-text-fill: #7ddc3a;" +
-            "-fx-background-radius: 20; -fx-font-size: 10px; -fx-font-weight: bold;" +
-            "-fx-padding: 3 10 3 10; -fx-border-color: rgba(57,169,0,0.4); -fx-border-radius: 20;"
-        );
-        Label tagNivel = new Label("TECNÓLOGO");
-        tagNivel.setStyle(
-            "-fx-background-color: rgba(255,255,255,0.1); -fx-text-fill: rgba(255,255,255,0.7);" +
-            "-fx-background-radius: 20; -fx-font-size: 10px; -fx-font-weight: bold;" +
-            "-fx-padding: 3 10 3 10; -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 20;"
-        );
-        HBox tags = new HBox(6, tagEstado, tagNivel);
+    Label tagEstado = new Label("En ejecución");
+    tagEstado.setStyle(
+        "-fx-background-color: rgba(57,169,0,0.25); -fx-text-fill: #7ddc3a;" +
+        "-fx-background-radius: 20; -fx-font-size: 10px; -fx-font-weight: bold;" +
+        "-fx-padding: 3 10 3 10; -fx-border-color: rgba(57,169,0,0.4); -fx-border-radius: 20;"
+    );
 
-        VBox left = new VBox(6, fichaNum, desc, tags);
-        left.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(left, Priority.ALWAYS);
+    Label tagNivel = new Label("TECNÓLOGO");
+    tagNivel.setStyle(
+        "-fx-background-color: rgba(255,255,255,0.1); -fx-text-fill: rgba(255,255,255,0.7);" +
+        "-fx-background-radius: 20; -fx-font-size: 10px; -fx-font-weight: bold;" +
+        "-fx-padding: 3 10 3 10; -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 20;"
+    );
 
-        // Quick search box
-        Label qsLabel = new Label("QUICK SEARCH");
-        qsLabel.setStyle("-fx-font-size: 8.5px; -fx-text-fill: rgba(255,255,255,0.5); -fx-letter-spacing: 0.08em;");
+    HBox tags = new HBox(6, tagEstado, tagNivel);
 
-        TextField qsField = new TextField();
-        qsField.setPromptText("Número de ficha...");
-        qsField.setStyle(
-            "-fx-background-color: rgba(255,255,255,0.08); -fx-text-fill: white;" +
-            "-fx-prompt-text-fill: rgba(255,255,255,0.3); -fx-background-radius: 6;" +
-            "-fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 6;" +
-            "-fx-font-size: 12px; -fx-padding: 5 8 5 8;"
-        );
-        qsField.textProperty().addListener((obs, o, n) -> applySearch(n));
-        qsField.textProperty().addListener((obs, o, n) -> {
-            // Actualizar título del hero si es una ficha específica
-            if (n != null && !n.trim().isEmpty()) {
-                fichaNum.setText("Ficha: " + n.trim());
-            } else {
-                fichaNum.setText("Ficha: —");
-            }
-        });
+    VBox left = new VBox(6, fichaNum, desc, tags);
+    left.setAlignment(Pos.CENTER_LEFT);
+    HBox.setHgrow(left, Priority.ALWAYS);
 
-        VBox qsBox = new VBox(6, qsLabel, qsField);
-        qsBox.setStyle(
-            "-fx-background-color: rgba(0,0,0,0.25); -fx-background-radius: 10;" +
-            "-fx-border-color: rgba(255,255,255,0.1); -fx-border-radius: 10; -fx-padding: 10 12 10 12;"
-        );
-        qsBox.setMinWidth(140);
+    // 🔍 Buscador
+    Label qsLabel = new Label("BÚSQUEDA RÁPIDA");
+    qsLabel.setStyle("-fx-font-size: 8.5px; -fx-text-fill: rgba(255,255,255,0.5); -fx-letter-spacing: 0.08em;");
 
-        HBox hero = new HBox(16, left, qsBox);
-        hero.setAlignment(Pos.CENTER_LEFT);
-        hero.setPadding(new Insets(16, 18, 16, 18));
-        hero.setStyle(
-            "-fx-background-color: linear-gradient(to right, #1c3a12, #254d18, #39A900);" +
-            "-fx-background-radius: 12;"
-        );
+    TextField qsField = new TextField();
+    qsField.setPromptText("Número de ficha...");
+    qsField.setStyle(
+        "-fx-background-color: rgba(255,255,255,0.08); -fx-text-fill: white;" +
+        "-fx-prompt-text-fill: rgba(255,255,255,0.3); -fx-background-radius: 6;" +
+        "-fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 6;" +
+        "-fx-font-size: 12px; -fx-padding: 5 8 5 8;"
+    );
 
-        HBox wrapper = new HBox(hero);
-        wrapper.setPadding(new Insets(14, 16, 10, 16));
-        HBox.setHgrow(hero, Priority.ALWAYS);
-        return wrapper;
-    }
+    qsField.textProperty().addListener((obs, o, n) -> applySearch(n));
+    qsField.textProperty().addListener((obs, o, n) -> {
+        if (n != null && !n.trim().isEmpty()) {
+            fichaNum.setText("Ficha: " + n.trim());
+        } else {
+            fichaNum.setText("Ficha: —");
+        }
+    });
 
+    VBox qsBox = new VBox(6, qsLabel, qsField);
+    qsBox.setStyle(
+        "-fx-background-color: rgba(0,0,0,0.25); -fx-background-radius: 10;" +
+        "-fx-border-color: rgba(255,255,255,0.1); -fx-border-radius: 10; -fx-padding: 10 12 10 12;"
+    );
+    qsBox.setMinWidth(140);
+
+    HBox hero = new HBox(16, left, qsBox);
+    hero.setAlignment(Pos.CENTER_LEFT);
+    hero.setPadding(new Insets(16, 18, 16, 18));
+    hero.setStyle(
+        "-fx-background-color: linear-gradient(to right, #1c3a12, #254d18, #39A900);" +
+        "-fx-background-radius: 12;"
+    );
+
+    HBox wrapper = new HBox(hero);
+    wrapper.setPadding(new Insets(14, 16, 10, 16));
+    HBox.setHgrow(hero, Priority.ALWAYS);
+
+    return wrapper;
+}
     // ── Sección de tabla ─────────────────────────────────────────
     private VBox buildTableSection() {
         // Header row: estado + botón cargar
@@ -296,4 +298,6 @@ public class ConsultFichasView extends VBox {
     }
 
     private String safe(String v) { return v == null ? "" : v.toLowerCase(); }
+
+    
 }

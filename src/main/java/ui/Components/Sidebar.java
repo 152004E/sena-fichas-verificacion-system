@@ -34,28 +34,28 @@ public class Sidebar {
     }
 
     public VBox build() {
-        // ── Brand ────────────────────────────────────────────────
+        // ── Marca ────────────────────────────────────────────────
         VBox brandBox = buildBrand();
 
-        // ── Nav items ────────────────────────────────────────────
+        // ── Items de navegación ──────────────────────────────────
         VBox nav = new VBox(2);
         nav.setPadding(new Insets(10, 8, 10, 8));
         VBox.setVgrow(nav, Priority.ALWAYS);
 
         nav.getChildren().addAll(
-            buildNavItem("dashboard", "Dashboard",        "M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"),
-            buildNavItem("consult",   "Consult Fichas",   "M6.5 11a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm3.5-1l3.5 3.5"),
-            buildNavItem("alarms",    "Validation Alarms","M8 1a5 5 0 015 5v3l1.5 2.5h-13L3 9V6a5 5 0 015-5zm-1 12h2"),
-            buildNavItem("reports",   "Reports",          "M2 3h12v10H2zM5 7h6M5 9.5h4"),
-            buildNavItem("settings",  "Settings",         "M8 10a2 2 0 100-4 2 2 0 000 4zm5.3-1.7l1.2-.7-1-1.7-1.2.7a5 5 0 00-1-.6L11 5H9l-.3 1a5 5 0 00-1 .6L6.5 6l-1 1.7 1.2.7a5 5 0 000 1.2L5.5 10.4l1 1.7 1.2-.7a5 5 0 001 .6L9 13h2l.3-1a5 5 0 001-.6l1.2.7 1-1.7-1.2-.7a5 5 0 000-1.2z")
+            buildNavItem("dashboard", "Panel",                "M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"),
+            buildNavItem("consult",   "Consultar Fichas",     "M6.5 11a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm3.5-1l3.5 3.5"),
+            buildNavItem("alarms",    "Alertas de Validación","M8 1a5 5 0 015 5v3l1.5 2.5h-13L3 9V6a5 5 0 015-5zm-1 12h2"),
+            buildNavItem("reports",   "Reportes",             "M2 3h12v10H2zM5 7h6M5 9.5h4"),
+            buildNavItem("settings",  "Configuración",        "M8 10a2 2 0 100-4 2 2 0 000 4zm5.3-1.7l1.2-.7-1-1.7-1.2.7a5 5 0 00-1-.6L11 5H9l-.3 1a5 5 0 00-1 .6L6.5 6l-1 1.7 1.2.7a5 5 0 000 1.2L5.5 10.4l1 1.7 1.2-.7a5 5 0 001 .6L9 13h2l.3-1a5 5 0 001-.6l1.2.7 1-1.7-1.2-.7a5 5 0 000-1.2z")
         );
 
-        // Spacer
+        // Espaciador
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
 
-        // ── Sync button ──────────────────────────────────────────
-        Button btnSync = new Button("⟳  Sync Records");
+        // ── Botón sincronizar ────────────────────────────────────
+        Button btnSync = new Button("⟳  Sincronizar Registros");
         btnSync.setStyle(
             "-fx-background-color: #39A900; -fx-text-fill: white;" +
             "-fx-font-size: 12px; -fx-font-weight: bold;" +
@@ -90,7 +90,6 @@ public class Sidebar {
     }
 
     private VBox buildBrand() {
-        // Ícono verde
         Label icon = new Label("◈");
         icon.setStyle(
             "-fx-font-size: 16px; -fx-text-fill: white;" +
@@ -104,7 +103,7 @@ public class Sidebar {
         HBox logoRow = new HBox(8, icon, name);
         logoRow.setAlignment(Pos.CENTER_LEFT);
 
-        Label sub = new Label("VERIFICATION SYSTEM");
+        Label sub = new Label("SISTEMA DE VERIFICACIÓN");
         sub.setStyle("-fx-font-size: 8.5px; -fx-text-fill: #4b5263; -fx-letter-spacing: 0.08em;");
 
         VBox brand = new VBox(4, logoRow, sub);
@@ -114,7 +113,6 @@ public class Sidebar {
     }
 
     private HBox buildNavItem(String key, String label, String svgData) {
-        // Ícono SVG
         SVGPath icon = new SVGPath();
         icon.setContent(svgData);
         icon.setStyle("-fx-fill: transparent; -fx-stroke: currentColor; -fx-stroke-width: 1.4;");
