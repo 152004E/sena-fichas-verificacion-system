@@ -40,6 +40,7 @@ public class MainWindow {
         stage.setScene(scene);
         stage.setMinWidth(1000);
         stage.setMinHeight(650);
+        stage.setMaximized(true);
         stage.show();
     }
 
@@ -70,6 +71,7 @@ public class MainWindow {
 
     private ConsultFichasView getConsult() {
         if (consultFichasView == null) consultFichasView = new ConsultFichasView();
+        consultFichasView.setDashboard(getDashboard());
         return consultFichasView;
     }
 

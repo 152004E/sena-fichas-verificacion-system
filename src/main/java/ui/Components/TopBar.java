@@ -33,7 +33,7 @@ public class TopBar {
 
     public HBox build() {
         // ── Tabs ─────────────────────────────────────────────────
-        Label tabFichas    = buildTab("", "consult");
+        Label tabFichas    = buildTab("fichas perfectas", "consult");
         Label tabDashboard = buildTab("Panel",       "dashboard");
         Label tabSync      = buildTab("Estado", "alarms");
 
@@ -51,7 +51,7 @@ public class TopBar {
         // ── Buscador ─────────────────────────────────────────────
         TextField search = new TextField();
         search.setPromptText("Buscar número de ficha...");
-        search.setPrefWidth(170);
+        search.setPrefWidth(370);
         search.setStyle(
             "-fx-background-color: #1e2230; -fx-text-fill: #c8ccd8;" +
             "-fx-prompt-text-fill: #4b5263; -fx-background-radius: 8;" +
