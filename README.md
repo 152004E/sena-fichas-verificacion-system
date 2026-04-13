@@ -121,7 +121,6 @@ sena-fichas-verificacion-system/
 │       │           ├── ReportsView.java        # Vista de reportes y estadísticas
 │       │           ├── SettingsView.java       # Configuración de la aplicación
 │       │           ├── Sidebar.java            # Barra lateral de navegación
-│       │           ├── TopBar.java             # Barra superior con controles
 │       │           └── ValidationAlarmsView.java # Vista de alertas de validación
 │       │
 │       └── resources/
