@@ -170,7 +170,8 @@ public class ConsultFichasView extends VBox {
         qsBox.setMinWidth(140);
 
         HBox hero = new HBox(16, left, qsBox);
-        hero.setAlignment(Pos.CENTER_LEFT);
+        hero.setAlignment(Pos.CENTER);
+        HBox.setHgrow(left, Priority.ALWAYS);
         hero.setPadding(new Insets(16, 18, 16, 18));
         hero.setStyle(
                 "-fx-background-color: linear-gradient(to right, #1c3a12, #254d18, #39A900);" +
@@ -264,11 +265,8 @@ public class ConsultFichasView extends VBox {
         TableColumn<Ficha, String> colProg = col("Programa", 220);
         colProg.setCellValueFactory(new PropertyValueFactory<>("programa"));
 
-        TableColumn<Ficha, String> colNivel = col("Nivel", 120);
+        TableColumn<Ficha, String> colNivel = col("Nivel", 100);
         colNivel.setCellValueFactory(new PropertyValueFactory<>("nivel"));
-
-        TableColumn<Ficha, Integer> colApr = col("Aprendices", 100);
-        colApr.setCellValueFactory(new PropertyValueFactory<>("aprendices"));
 
         TableColumn<Ficha, String> colInicio = col("Inicio", 110);
         colInicio.setCellValueFactory(new PropertyValueFactory<>("fechaInicio"));
@@ -280,7 +278,7 @@ public class ConsultFichasView extends VBox {
         colFin.setCellValueFactory(new PropertyValueFactory<>("fechaFin"));
 
         // Estado con color
-        TableColumn<Ficha, String> colEstado = col("Estado", 130);
+        TableColumn<Ficha, String> colEstado = col("Estado", 100);
         colEstado.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().getEstado().getLabel()));
         colEstado.setCellFactory(col -> new TableCell<>() {
             @Override
@@ -322,17 +320,20 @@ public class ConsultFichasView extends VBox {
         TableColumn<Ficha, String> colTrimestre = col("Trimestre", 120);
         colTrimestre.setCellValueFactory(new PropertyValueFactory<>("trimestre"));
 
-        TableColumn<Ficha, String> colAcuerdo = col("Acuerdo", 130);
+        TableColumn<Ficha, String> colAcuerdo = col("Acuerdo", 100);
         colAcuerdo.setCellValueFactory(new PropertyValueFactory<>("acuerdo"));
 
-        TableColumn<Ficha, String> colEvaluacion = col("Evaluación", 140);
+        TableColumn<Ficha, String> colEvaluacion = col("Evaluación", 100);
         colEvaluacion.setCellValueFactory(new PropertyValueFactory<>("evaluacion"));
 
+        TableColumn<Ficha, Integer> colApr = col("Aprendices", 100);
+        colApr.setCellValueFactory(new PropertyValueFactory<>("aprendices"));
+
         table.getColumns().addAll(
-                colNum, colProg, colNivel, colApr,
+                colNum, colProg, colNivel,
                 colInicio, colFinLec, colFin,
                 colEstado, colTrimestre, colAcuerdo, colEvaluacion,
-                colI25, colBil, colI26, colTrans);
+                colI25, colBil, colI26, colTrans, colApr);
 
         // Estilo de filas
         table.setRowFactory(tv -> {

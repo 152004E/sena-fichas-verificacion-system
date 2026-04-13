@@ -94,38 +94,49 @@ sena-fichas-verificacion-system/
 │   └── main/
 │       ├── java/
 │       │   ├── app/
-│       │   │   └── Main.java                    # Clase principal y arranque de la aplicación
+│       │   │   └── Main.java                    # Clase principal y punto de entrada de la aplicación
 │       │   │
 │       │   ├── database/
-│       │   │   └── DatabaseManager.java        # Acceso y gestión de la base de datos SQLite
-│       │   │
-│       │   ├── Model/
-│       │   │   ├── Ficha.java                   # Modelo de ficha
-│       │   │   ├── Instructor.java              # Modelo de instructor
-│       │   │   ├── Programa.java                # Modelo de programa
-│       │   │   └── EstadoFicha.java             # Enumeración de estados de ficha
+│       │   │   └── DatabaseManager.java        # Gestión de conexión y operaciones con base de datos SQLite
 │       │   │
 │       │   ├── excel/
-│       │   │   └── (ExcelReader.java próximamente) # Lector de archivos Excel
+│       │   │   ├── ExcelReader.java            # Lector y procesador de archivos Excel
+│       │   │   ├── ExcelSource.java            # Interfaz para fuentes de datos Excel
+│       │   │   └── LocalExcelSource.java       # Implementación para archivos Excel locales
+│       │   │
+│       │   ├── Model/
+│       │   │   ├── EstadoFicha.java            # Enumeración de estados posibles de las fichas
+│       │   │   ├── Ficha.java                  # Modelo de datos para fichas de formación
+│       │   │   ├── Instructor.java             # Modelo de datos para instructores
+│       │   │   └── Programa.java               # Modelo de datos para programas formativos
 │       │   │
 │       │   ├── service/
-│       │   │   └── (SyncService.java próximamente) # Lógica de sincronización de datos
+│       │   │   └── SyncService.java            # Servicio de sincronización y validación de datos
 │       │   │
 │       │   └── ui/
-│       │       └── MainWindow.java              # Interfaz gráfica con JavaFX
+│       │       ├── MainWindow.java             # Ventana principal de la interfaz gráfica
+│       │       └── Components/
+│       │           ├── ConsultFichasView.java  # Vista para consulta de fichas
+│       │           ├── DashboardView.java      # Panel de control principal
+│       │           ├── ReportsView.java        # Vista de reportes y estadísticas
+│       │           ├── SettingsView.java       # Configuración de la aplicación
+│       │           ├── Sidebar.java            # Barra lateral de navegación
+│       │           ├── TopBar.java             # Barra superior con controles
+│       │           └── ValidationAlarmsView.java # Vista de alertas de validación
 │       │
 │       └── resources/
-│           └── config.properties               # Configuración de la aplicación
+│           └── config.properties               # Archivo de configuración de la aplicación
 │
-├── data/
-│   └── .gitkeep                                # Carpeta de datos persistentes
+├── data/                                        # Directorio para datos persistentes y base de datos
 │
-├── target/                                      # Salida de compilación Maven
-│   ├── classes/
-│   ├── generated-sources/
-│   └── maven-status/
+├── Example/                                     # Ejemplos y archivos de prueba
 │
-├── pom.xml                                     # Archivo de configuración y dependencias Maven
+├── target/                                      # Directorio de compilación generado por Maven
+│   ├── classes/                                 # Clases compiladas Java
+│   ├── generated-sources/                       # Fuentes generadas automáticamente
+│   └── maven-status/                            # Estado de compilación de Maven
+│
+├── pom.xml                                     # Configuración de dependencias y build Maven
 └── README.md                                   # Documentación del proyecto
 ```
 
