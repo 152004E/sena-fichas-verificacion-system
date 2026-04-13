@@ -51,7 +51,10 @@ public class DatabaseManager {
                         instructor_bilinguismo TEXT,
                         instructor_tecnico_2026 TEXT,
                         transversales_faltantes TEXT,
-                        estado TEXT
+                        estado TEXT,
+                        trimestre TEXT,
+                        acuerdo TEXT,
+                        evaluacion TEXT
                     )
                 """;
 
@@ -76,8 +79,9 @@ public class DatabaseManager {
                     INSERT INTO FICHA (numero, nivel, aprendices, programa,
                         fecha_inicio, fecha_fin_lec, fecha_fin,
                         instructor_tecnico_2025, instructor_bilinguismo,
-                        instructor_tecnico_2026, transversales_faltantes, estado)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                        instructor_tecnico_2026, transversales_faltantes, estado,
+                        trimestre, acuerdo, evaluacion)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, f.getNumero());
@@ -92,6 +96,9 @@ public class DatabaseManager {
             ps.setString(10, f.getInstructorTecnico2026());
             ps.setString(11, f.getTransversalesFaltantes());
             ps.setString(12, f.getEstado() != null ? f.getEstado().getLabel() : "Desconocido");
+            ps.setString(13, f.getTrimestre()); // ← NUEVO
+            ps.setString(14, f.getAcuerdo()); // ← NUEVO
+            ps.setString(15, f.getEvaluacion()); // ← NUEVO
             ps.executeUpdate();
         }
     }

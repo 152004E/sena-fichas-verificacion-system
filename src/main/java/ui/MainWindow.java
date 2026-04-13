@@ -30,7 +30,6 @@ public class MainWindow {
 
         root = new BorderPane();
         root.setLeft(sidebar.build());
-        root.setTop(topBar.build());
         root.setStyle("-fx-background-color: #0f1117;");
 
         navigateTo("consult");

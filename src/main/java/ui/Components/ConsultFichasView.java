@@ -1,5 +1,6 @@
 package ui.Components;
 
+import Model.EstadoFicha;
 import Model.Ficha;
 import database.DatabaseManager;
 import excel.LocalExcelSource;
@@ -17,7 +18,9 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.sql.ResultSet;
 import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ConsultFichasView extends VBox {
@@ -40,6 +43,48 @@ public class ConsultFichasView extends VBox {
         setSpacing(0);
         VBox.setVgrow(this, Priority.ALWAYS);
         getChildren().addAll(buildHeroBanner(), buildTableSection());
+        cargarDatosGuardados();
+    }
+
+    private void cargarDatosGuardados() {
+        try {
+            DatabaseManager db = new DatabaseManager();
+            db.conectar();
+            ResultSet rs = db.obtenerFichas();
+
+            List<Ficha> listaFichas = new ArrayList<>();
+            while (rs.next()) {
+                Ficha f = new Ficha();
+                f.setNumero(rs.getInt("numero"));
+                f.setPrograma(rs.getString("programa"));
+                f.setNivel(rs.getString("nivel"));
+                f.setAprendices(rs.getInt("aprendices"));
+                f.setFechaInicio(rs.getString("fecha_inicio"));
+                f.setFechaFinLec(rs.getString("fecha_fin_lec"));
+                f.setFechaFin(rs.getString("fecha_fin"));
+                f.setInstructorTecnico2025(rs.getString("instructor_tecnico_2025"));
+                f.setInstructorBilinguismo(rs.getString("instructor_bilinguismo"));
+                f.setInstructorTecnico2026(rs.getString("instructor_tecnico_2026"));
+                f.setTransversalesFaltantes(rs.getString("transversales_faltantes"));
+                f.setTrimestre(rs.getString("trimestre"));
+                f.setAcuerdo(rs.getString("acuerdo"));
+                f.setEvaluacion(rs.getString("evaluacion"));
+
+                String estadoStr = rs.getString("estado");
+                f.setEstado(EstadoFicha.fromString(estadoStr));
+
+                listaFichas.add(f);
+            }
+
+            fichas.setAll(listaFichas);
+            if (!listaFichas.isEmpty()) {
+                estadoLabel.setText("✓ " + listaFichas.size() + " fichas cargadas desde BD");
+            }
+
+            db.desconectar();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     // ── Hero banner con número de ficha ─────────────────────────
@@ -213,7 +258,7 @@ public class ConsultFichasView extends VBox {
         table.setPlaceholder(buildPlaceholder());
 
         // ── Columnas ─────────────────────────────────────────────
-        TableColumn<Ficha, Integer> colNum = col("Ficha", 90);
+        TableColumn<Ficha, Integer> colNum = col("Ficha", 80);
         colNum.setCellValueFactory(new PropertyValueFactory<>("numero"));
 
         TableColumn<Ficha, String> colProg = col("Programa", 220);
@@ -274,10 +319,20 @@ public class ConsultFichasView extends VBox {
         TableColumn<Ficha, String> colTrans = col("Transversales faltantes", 200);
         colTrans.setCellValueFactory(new PropertyValueFactory<>("transversalesFaltantes"));
 
+        TableColumn<Ficha, String> colTrimestre = col("Trimestre", 120);
+        colTrimestre.setCellValueFactory(new PropertyValueFactory<>("trimestre"));
+
+        TableColumn<Ficha, String> colAcuerdo = col("Acuerdo", 130);
+        colAcuerdo.setCellValueFactory(new PropertyValueFactory<>("acuerdo"));
+
+        TableColumn<Ficha, String> colEvaluacion = col("Evaluación", 140);
+        colEvaluacion.setCellValueFactory(new PropertyValueFactory<>("evaluacion"));
+
         table.getColumns().addAll(
                 colNum, colProg, colNivel, colApr,
                 colInicio, colFinLec, colFin,
-                colEstado, colI25, colBil, colI26, colTrans);
+                colEstado, colTrimestre, colAcuerdo, colEvaluacion,
+                colI25, colBil, colI26, colTrans);
 
         // Estilo de filas
         table.setRowFactory(tv -> {
@@ -293,13 +348,56 @@ public class ConsultFichasView extends VBox {
             return row;
         });
 
+        // ← MENÚ CONTEXTUAL AQUÍ, FUERA DEL setRowFactory
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem copyCell = new MenuItem("📋 Copiar celda");
+        MenuItem copyRow = new MenuItem("📋 Copiar fila");
+
+        copyCell.setOnAction(e -> {
+            Ficha ficha = table.getSelectionModel().getSelectedItem();
+            if (ficha != null) {
+                TablePosition<Ficha, ?> pos = table.getFocusModel().getFocusedCell();
+                if (pos != null) {
+                    Object cellValue = pos.getTableColumn().getCellData(ficha);
+                    copiarAlPortapapeles(cellValue != null ? cellValue.toString() : "");
+                }
+            }
+        });
+
+        copyRow.setOnAction(e -> {
+            Ficha ficha = table.getSelectionModel().getSelectedItem();
+            if (ficha != null) {
+                StringBuilder sb = new StringBuilder();
+                sb.append(ficha.getNumero()).append("\t")
+                        .append(ficha.getPrograma()).append("\t")
+                        .append(ficha.getNivel()).append("\t")
+                        .append(ficha.getAprendices()).append("\t")
+                        .append(ficha.getFechaInicio()).append("\t")
+                        .append(ficha.getFechaFinLec()).append("\t")
+                        .append(ficha.getFechaFin()).append("\t")
+                        .append(ficha.getEstado().getLabel()).append("\t")
+                        .append(ficha.getTrimestre()).append("\t")
+                        .append(ficha.getAcuerdo()).append("\t")
+                        .append(ficha.getEvaluacion()).append("\t")
+                        .append(ficha.getInstructorTecnico2025()).append("\t")
+                        .append(ficha.getInstructorBilinguismo()).append("\t")
+                        .append(ficha.getInstructorTecnico2026()).append("\t")
+                        .append(ficha.getTransversalesFaltantes());
+
+                copiarAlPortapapeles(sb.toString());
+            }
+        });
+
+        contextMenu.getItems().addAll(copyCell, copyRow);
+        table.setContextMenu(contextMenu);
+
         return table;
     }
 
     private <T> TableColumn<Ficha, T> col(String title, double width) {
         TableColumn<Ficha, T> c = new TableColumn<>(title);
         c.setPrefWidth(width);
-        c.setStyle("-fx-font-size: 12px; -fx-text-fill: #8b92a5;");
+        c.setStyle("-fx-alignment: CENTER; -fx-font-size: 12px; -fx-text-fill: #8b92a5;");
         return c;
     }
 
@@ -376,6 +474,13 @@ public class ConsultFichasView extends VBox {
             return "";
         String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
         return normalized.replaceAll("\\p{M}", "").toLowerCase();
+    }
+
+    private void copiarAlPortapapeles(String texto) {
+        javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(texto);
+        clipboard.setContent(content);
     }
 
 }
