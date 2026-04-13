@@ -16,6 +16,7 @@ import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +32,6 @@ public class ExcelReader {
             Map<Integer, EstadoFicha> estadosMap = new HashMap<>();
             Map<Integer, String> fechaFinLecMap = new HashMap<>();
             Map<Integer, String> fechaFinMap = new HashMap<>();
-
             extraerDatosPE04(workbook, estadosMap, fechaFinLecMap, fechaFinMap);
 
             // 2. Leer Hoja7
@@ -69,11 +69,9 @@ public class ExcelReader {
 
                 ficha.setPrograma(formatter.formatCellValue(row.getCell(3)));
 
-                // Fecha inicio viene directo de Hoja7, no tiene fórmula
                 String fechaInicio = formatter.formatCellValue(row.getCell(4), evaluator).trim();
                 ficha.setFechaInicio(fechaInicio);
 
-                // Fecha fin lectiva y fecha fin: las sacamos de PE04 directamente
                 ficha.setFechaFinLec(fechaFinLecMap.getOrDefault(numFicha, ""));
                 ficha.setFechaFin(fechaFinMap.getOrDefault(numFicha, ""));
 
@@ -81,7 +79,20 @@ public class ExcelReader {
                 ficha.setInstructorTecnico2025(formatter.formatCellValue(row.getCell(12)));
                 ficha.setInstructorBilinguismo(formatter.formatCellValue(row.getCell(14)));
                 ficha.setInstructorTecnico2026(formatter.formatCellValue(row.getCell(15)));
-                ficha.setTransversalesFaltantes(formatter.formatCellValue(row.getCell(16)));
+
+                // Transversales FALTANTES → col 16 (separadas por espacios)
+                ficha.setTransversalesFaltantes(formatter.formatCellValue(row.getCell(16)).trim());
+
+                // Transversales VISTAS → pares (materia, instructor) en cols 32-65
+                Map<String, String> vistas = new LinkedHashMap<>();
+                for (int col = 32; col <= 64; col += 2) {
+                    String materia = formatter.formatCellValue(row.getCell(col)).trim();
+                    String instructor = formatter.formatCellValue(row.getCell(col + 1)).trim();
+                    if (!materia.isEmpty()) {
+                        vistas.put(materia, instructor);
+                    }
+                }
+                ficha.setTransversalesVistas(vistas);
 
                 // Campos calculados
                 ficha.setTrimestre(calcularTrimestre(fechaInicio));
@@ -97,14 +108,6 @@ public class ExcelReader {
         return listaFichas;
     }
 
-    /**
-     * Lee PE04 de una sola pasada y llena los tres mapas:
-     * - estadosMap → col G (índice 6)
-     * - fechaFinLecMap → col E (índice 4) ← BUSCARV col 5
-     * - fechaFinMap → col F (índice 5) ← BUSCARV col 6
-     *
-     * La clave de los tres mapas es el número de ficha (col A, índice 0)
-     */
     private void extraerDatosPE04(
             Workbook workbook,
             Map<Integer, EstadoFicha> estadosMap,
@@ -132,15 +135,12 @@ public class ExcelReader {
             try {
                 int numFicha = Integer.parseInt(numStr);
 
-                // Estado → col G (índice 6)
                 String estadoStr = formatter.formatCellValue(row.getCell(6), evaluator);
                 estadosMap.put(numFicha, EstadoFicha.fromString(estadoStr));
 
-                // Fecha fin lectiva → col E (índice 4)
                 String finLec = obtenerFecha(row.getCell(4), formatter, evaluator);
                 fechaFinLecMap.put(numFicha, finLec);
 
-                // Fecha fin → col F (índice 5)
                 String finTotal = obtenerFecha(row.getCell(5), formatter, evaluator);
                 fechaFinMap.put(numFicha, finTotal);
                 System.out.println("Ficha PE04: " + numFicha + " | Fin: " + finTotal);
@@ -148,7 +148,6 @@ public class ExcelReader {
             } catch (NumberFormatException e) {
                 System.err.println("Fila " + i + " en PE04 ignorada: " + numStr);
             }
-
         }
 
         System.out.println("✅ PE04 procesado: " + estadosMap.size() + " fichas encontradas");
@@ -178,8 +177,7 @@ public class ExcelReader {
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("dd/MM/yyyy");
             java.util.Date fecha = sdf.parse(fechaInicio);
             java.util.Calendar cal = java.util.Calendar.getInstance();
-            cal.set(2024, 10, 20); // 20 noviembre 2024
-
+            cal.set(2024, 10, 20);
             return fecha.before(cal.getTime()) ? "ACUERDO 007" : "ACUERDO 009";
         } catch (Exception e) {
             return "ACUERDO 009";
@@ -198,48 +196,37 @@ public class ExcelReader {
             int meses = hoy.get(java.util.Calendar.MONTH) - cal.get(java.util.Calendar.MONTH);
             long mesesTotales = años * 12L + meses;
 
-            if (mesesTotales < 1)
-                return "INDUCCION";
-            if (mesesTotales <= 4)
-                return "ANALISIS";
-            if (mesesTotales <= 9)
-                return "PLANEACION";
-            if (mesesTotales <= 13)
-                return "EJECUCION";
-            if (mesesTotales <= 18)
-                return "EVALUACION";
+            if (mesesTotales < 1)  return "INDUCCION";
+            if (mesesTotales <= 4)  return "ANALISIS";
+            if (mesesTotales <= 9)  return "PLANEACION";
+            if (mesesTotales <= 13) return "EJECUCION";
+            if (mesesTotales <= 18) return "EVALUACION";
             return "NO ESTA EN LECTIVA";
         } catch (Exception e) {
             return "DESCONOCIDO";
         }
     }
 
-private String obtenerFecha(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
-    if (cell == null) return "";
-
-    try {
-        switch (cell.getCellType()) {
-
-            case NUMERIC:
-                if (DateUtil.isCellDateFormatted(cell)) {
-                    java.util.Date date = cell.getDateCellValue();
-                    return new SimpleDateFormat("dd/MM/yyyy").format(date);
-                }
-                return formatter.formatCellValue(cell, evaluator).trim();
-
-            case STRING:
-                // Ya viene como texto (ej: "02/03/2027")
-                return cell.getStringCellValue().trim();
-
-            case FORMULA:
-                return formatter.formatCellValue(cell, evaluator).trim();
-
-            default:
-                return "";
+    private String obtenerFecha(Cell cell, DataFormatter formatter, FormulaEvaluator evaluator) {
+        if (cell == null) return "";
+        try {
+            switch (cell.getCellType()) {
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell)) {
+                        java.util.Date date = cell.getDateCellValue();
+                        return new SimpleDateFormat("dd/MM/yyyy").format(date);
+                    }
+                    return formatter.formatCellValue(cell, evaluator).trim();
+                case STRING:
+                    return cell.getStringCellValue().trim();
+                case FORMULA:
+                    return formatter.formatCellValue(cell, evaluator).trim();
+                default:
+                    return "";
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Error leyendo fecha: " + e.getMessage());
+            return formatter.formatCellValue(cell, evaluator).trim();
         }
-    } catch (Exception e) {
-        System.err.println("⚠️ Error leyendo fecha: " + e.getMessage());
-        return formatter.formatCellValue(cell, evaluator).trim();
     }
-}
 }
