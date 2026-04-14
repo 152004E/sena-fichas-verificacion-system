@@ -32,6 +32,12 @@ public class ConsultFichasView extends VBox {
     private DashboardView dashboard;
     private FilteredList<Ficha> filtro;
     private Label estadoLabel;
+    
+    // Referencias a los botones para actualizar contadores
+    private ToggleButton toggleEjecucion;
+    private ToggleButton toggleFinalizado;
+    private ToggleButton toggleTecnologo;
+    private ToggleButton toggleTecnico;
 
     public void setDashboard(DashboardView dashboard) {
         this.dashboard = dashboard;
@@ -82,6 +88,7 @@ public class ConsultFichasView extends VBox {
             fichas.setAll(listaFichas);
             if (!listaFichas.isEmpty()) {
                 estadoLabel.setText("✓ " + listaFichas.size() + " fichas cargadas desde BD");
+                actualizarContadores();
             }
 
             db.desconectar();
@@ -101,11 +108,10 @@ public class ConsultFichasView extends VBox {
         desc.setMaxWidth(Double.MAX_VALUE);
         VBox.setVgrow(desc, Priority.ALWAYS);
 
-        ToggleButton toggleEjecucion = new ToggleButton("En ejecución");
-        ToggleButton toggleFinalizado = new ToggleButton("Finalizado");
-
-        ToggleButton toggleTecnologo = new ToggleButton("Tecnólogo");
-        ToggleButton toggleTecnico = new ToggleButton("Técnico");
+        toggleEjecucion = new ToggleButton("En ejecución");
+        toggleFinalizado = new ToggleButton("Finalizado");
+        toggleTecnologo = new ToggleButton("Tecnólogo");
+        toggleTecnico = new ToggleButton("Técnico");
         TextField qsField = new TextField();
         // estilos iniciales
         toggleEjecucion.setStyle(getToggleStyle(false));
@@ -244,6 +250,7 @@ public class ConsultFichasView extends VBox {
                 dashboard.refresh();
                 estadoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #5ed01a;");
                 estadoLabel.setText("✓  " + archivo.getName() + "  —  " + lista.size() + " fichas cargadas");
+                actualizarContadores();
             } catch (Exception ex) {
                 estadoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #e24b4a;");
                 estadoLabel.setText("✗  Error: " + ex.getMessage());
@@ -527,6 +534,37 @@ public class ConsultFichasView extends VBox {
         modal.prefWidthProperty().bind(stackRoot.widthProperty());
         modal.prefHeightProperty().bind(stackRoot.heightProperty());
         stackRoot.getChildren().add(modal);
+    }
+
+    private void actualizarContadores() {
+        if (fichas.isEmpty()) {
+            toggleEjecucion.setText("En ejecución");
+            toggleFinalizado.setText("Finalizado");
+            toggleTecnologo.setText("Tecnólogo");
+            toggleTecnico.setText("Técnico");
+            return;
+        }
+
+        long ejecucion = fichas.stream()
+                .filter(f -> normalize(f.getEstado().getLabel()).contains("ejecucion"))
+                .count();
+
+        long finalizado = fichas.stream()
+                .filter(f -> normalize(f.getEstado().getLabel()).contains("finalizado"))
+                .count();
+
+        long tecnologo = fichas.stream()
+                .filter(f -> normalize(f.getNivel()).contains("tecnologo"))
+                .count();
+
+        long tecnico = fichas.stream()
+                .filter(f -> normalize(f.getNivel()).contains("tecnico"))
+                .count();
+
+        toggleEjecucion.setText("En ejecución (" + ejecucion + ")");
+        toggleFinalizado.setText("Finalizado (" + finalizado + ")");
+        toggleTecnologo.setText("Tecnólogo (" + tecnologo + ")");
+        toggleTecnico.setText("Técnico (" + tecnico + ")");
     }
 
 }

@@ -135,7 +135,8 @@ public class ModalDetalleFicha extends StackPane {
         });
 
         TableColumn<String, String> c2 = new TableColumn<>("INSTRUCTOR");
-        c2.setCellValueFactory(d -> new SimpleStringProperty("—"));
+        c2.setCellValueFactory(d -> new SimpleStringProperty(
+                ficha.getTransversalesVistas().get(d.getValue())));
         c2.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
@@ -146,7 +147,9 @@ public class ModalDetalleFicha extends StackPane {
         });
 
         tableVistas.getColumns().addAll(c1, c2);
-        tableVistas.setItems(FXCollections.observableArrayList("TIC", "MAT", "EMP"));
+        tableVistas.setItems(
+                FXCollections.observableArrayList(
+                        ficha.getTransversalesVistas().keySet()));
 
         VBox cardVistas = new VBox(12, hVistas, tableVistas);
         cardVistas.setPadding(new Insets(16));
@@ -168,8 +171,8 @@ public class ModalDetalleFicha extends StackPane {
 
         String raw = ficha.getTransversalesFaltantes();
         List<String> faltantesList = (raw != null && !raw.isBlank())
-                ? List.of(raw.split(",\\s*"))
-                : List.of();
+        ? List.of(raw.split("\\s+"))
+        : List.of();
 
         TableView<String> tableFalt = new TableView<>();
         tableFalt.setStyle(
