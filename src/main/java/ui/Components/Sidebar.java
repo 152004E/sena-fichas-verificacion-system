@@ -47,6 +47,7 @@ public class Sidebar {
             buildNavItem("consult",   "Consultar Fichas",     "M6.5 11a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm3.5-1l3.5 3.5"),
             buildNavItem("alarms",    "Alertas de Validación","M8 1a5 5 0 015 5v3l1.5 2.5h-13L3 9V6a5 5 0 015-5zm-1 12h2"),
             buildNavItem("reports",   "Reportes",             "M2 3h12v10H2zM5 7h6M5 9.5h4"),
+            buildNavItem("descarga",  "Descarga Masiva",      "M3 7v6h10V7M7 3v4m6-4v4m-8 6l2 2 4-4"),
             buildNavItem("settings",  "Configuración",        "M8 10a2 2 0 100-4 2 2 0 000 4zm5.3-1.7l1.2-.7-1-1.7-1.2.7a5 5 0 00-1-.6L11 5H9l-.3 1a5 5 0 00-1 .6L6.5 6l-1 1.7 1.2.7a5 5 0 000 1.2L5.5 10.4l1 1.7 1.2-.7a5 5 0 001 .6L9 13h2l.3-1a5 5 0 001-.6l1.2.7 1-1.7-1.2-.7a5 5 0 000-1.2z")
         );
 

@@ -6,6 +6,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import ui.Components.ConsultFichasView;
 import ui.Components.DashboardView;
+import ui.Components.DescargaMasivaView;
 import ui.Components.ReportsView;
 import ui.Components.SettingsView;
 import ui.Components.Sidebar;
@@ -22,6 +23,7 @@ public class MainWindow {
     private ValidationAlarmsView alarmsView;
     private ReportsView reportsView;
     private SettingsView settingsView;
+    private DescargaMasivaView descargaMasivaView;
 
 public void show(Stage stage) {
     sidebar = new Sidebar(this::navigateTo);
@@ -52,6 +54,7 @@ public void show(Stage stage) {
             case "alarms" -> root.setCenter(getAlarms());
             case "reports" -> root.setCenter(getReports());
             case "settings" -> root.setCenter(getSettings());
+            case "descarga" -> root.setCenter(getDescarga());
         }
     }
 
@@ -92,5 +95,11 @@ public void show(Stage stage) {
         if (settingsView == null)
             settingsView = new SettingsView();
         return settingsView;
+    }
+
+    private DescargaMasivaView getDescarga() {
+        if (descargaMasivaView == null)
+            descargaMasivaView = new DescargaMasivaView();
+        return descargaMasivaView;
     }
 }
