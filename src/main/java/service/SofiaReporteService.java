@@ -15,7 +15,8 @@ import java.util.regex.Pattern;
  * Descarga el reporte XLS de aprendices desde SOFIA Plus.
  *
  * FLUJO (7 pasos obligatorios):
- *   Paso 0 — POST /sofia/home/principal.faces      → iniciar sesión
+ *   Paso 0 — POST /sofia/home/principal.
+ * faces      → iniciar sesión
  *   Paso 1 — GET  /reporteAprendices.faces         → HTML con ViewState + conversationContext
  *   Paso 2 — GET  /modalFicha.faces                → modal inicial con nuevo conversationContext
  *   Paso 3 — POST /modalFicha.faces (búsqueda)    → POST primera búsqueda de ficha
@@ -87,15 +88,27 @@ public class SofiaReporteService {
      */
     public Path descargarReporteFicha(int numeroFicha, Path dirDestino) throws Exception {
         notificar(numeroFicha, 0, 1, "Iniciando descarga...", true);
+        System.out.println("═══════════════════════════════════════════════");
+        System.out.println("📥 DESCARGANDO FICHA: " + numeroFicha);
+        System.out.println("═══════════════════════════════════════════════");
 
         // ── Paso 0: Navegar a HOME para asegurar sesión en contexto de la app ──
         notificar(numeroFicha, 0, 1, "Paso 0/6 — Inicializando sesión en la aplicación...", true);
-        System.out.println("DEBUG Paso 0: POST HOME " + HOME_URL);
+        System.out.println("📡 Paso 0: POST HOME " + HOME_URL);
+        System.out.println("🍪 Cookies antes del POST:");
+        for (var c : loginService.getCookieManager().getCookieStore().getCookies()) {
+            System.out.println("   • " + c.getName() + " = " + c.getValue());
+        }
         // POST con body vacío a HOME para asegurar que la sesión se propaga al contexto /sofia/
         // CRÍTICO: Debe ser POST, no GET. El navegador lo hace automáticamente después del login.
-        loginService.doPost(HOME_URL, new HashMap<>());
-        System.out.println("DEBUG Paso 0: HOME POST completed");
-        
+        String homeResp = loginService.doPost(HOME_URL, new HashMap<>());
+        System.out.println("📄 Paso 0: HOME response length = " + homeResp.length() + " chars");
+        if (homeResp.contains("josso_login") || homeResp.contains("Redirects the user")) {
+            System.out.println("⚠️  HOME response contiene redirección a login!");
+            System.out.println("Fragment: " + homeResp.substring(0, Math.min(400, homeResp.length())));
+        }
+        System.out.println("✅ Paso 0: HOME POST completed");
+
         // ── Pausa más larga para que se estabilice la sesión ────────────────
         Thread.sleep(2500);
 
@@ -139,7 +152,6 @@ public class SofiaReporteService {
         String urlModalPost = MODAL_URL_BASE + "?conversationContext=" + conversationContext2;
         String htmlBusqueda = buscarFichaEnModal(numeroFicha, viewState2, urlModalPost);
         String viewState3 = SofiaLoginService.extraerViewState(htmlBusqueda);
-        String conversationContext3 = extraerConversationContext(htmlBusqueda);
 
         // ── Paso 4: POST seleccionar ficha (confirmar búsqueda) ───
         notificar(numeroFicha, 0, 1, "Paso 4/6 — Seleccionando ficha...", true);

@@ -3,7 +3,7 @@ package database;
 import java.sql.*;
 import Model.Ficha;
 
-public class DatabaseManager {
+public class DatabaseManager implements AutoCloseable {
 
     private static final String DB_URL = "jdbc:sqlite:data/fichas.db";
     private Connection connection;
@@ -23,6 +23,11 @@ public class DatabaseManager {
         } catch (SQLException e) {
             System.err.println("Error al cerrar: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void close() {
+        desconectar();
     }
 
     private void crearTablas() throws SQLException {
@@ -96,10 +101,71 @@ public class DatabaseManager {
             ps.setString(10, f.getInstructorTecnico2026());
             ps.setString(11, f.getTransversalesFaltantes());
             ps.setString(12, f.getEstado() != null ? f.getEstado().getLabel() : "Desconocido");
-            ps.setString(13, f.getTrimestre()); // ← NUEVO
-            ps.setString(14, f.getAcuerdo()); // ← NUEVO
-            ps.setString(15, f.getEvaluacion()); // ← NUEVO
+            ps.setString(13, f.getTrimestre());
+            ps.setString(14, f.getAcuerdo());
+            ps.setString(15, f.getEvaluacion());
             ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Inserta o actualiza una ficha por número (upsert).
+     * Si existe, actualiza todos los campos. Si no, la inserta.
+     */
+    public void upsertFicha(Ficha f) throws SQLException {
+        String sql = """
+                    INSERT INTO FICHA (numero, nivel, aprendices, programa,
+                        fecha_inicio, fecha_fin_lec, fecha_fin,
+                        instructor_tecnico_2025, instructor_bilinguismo,
+                        instructor_tecnico_2026, transversales_faltantes, estado,
+                        trimestre, acuerdo, evaluacion)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    ON CONFLICT(numero) DO UPDATE SET
+                        nivel = excluded.nivel,
+                        aprendices = excluded.aprendices,
+                        programa = excluded.programa,
+                        fecha_inicio = excluded.fecha_inicio,
+                        fecha_fin_lec = excluded.fecha_fin_lec,
+                        fecha_fin = excluded.fecha_fin,
+                        instructor_tecnico_2025 = excluded.instructor_tecnico_2025,
+                        instructor_bilinguismo = excluded.instructor_bilinguismo,
+                        instructor_tecnico_2026 = excluded.instructor_tecnico_2026,
+                        transversales_faltantes = excluded.transversales_faltantes,
+                        estado = excluded.estado,
+                        trimestre = excluded.trimestre,
+                        acuerdo = excluded.acuerdo,
+                        evaluacion = excluded.evaluacion
+                """;
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, f.getNumero());
+            ps.setString(2, f.getNivel());
+            ps.setInt(3, f.getAprendices());
+            ps.setString(4, f.getPrograma());
+            ps.setString(5, f.getFechaInicio());
+            ps.setString(6, f.getFechaFinLec());
+            ps.setString(7, f.getFechaFin());
+            ps.setString(8, f.getInstructorTecnico2025());
+            ps.setString(9, f.getInstructorBilinguismo());
+            ps.setString(10, f.getInstructorTecnico2026());
+            ps.setString(11, f.getTransversalesFaltantes());
+            ps.setString(12, f.getEstado() != null ? f.getEstado().getLabel() : "Desconocido");
+            ps.setString(13, f.getTrimestre());
+            ps.setString(14, f.getAcuerdo());
+            ps.setString(15, f.getEvaluacion());
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Verifica si existe una ficha por número.
+     */
+    public boolean existeFicha(int numero) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM FICHA WHERE numero = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, numero);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
@@ -144,4 +210,5 @@ public class DatabaseManager {
     public Connection getConnection() {
         return connection;
     }
+    
 }

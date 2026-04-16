@@ -95,8 +95,7 @@ private VBox buildCard(String label, Label valueLabel, String accent) {
 }
 
 public void refresh() {
-    try {
-        DatabaseManager db = new DatabaseManager();
+    try (DatabaseManager db = new DatabaseManager()) {
         db.conectar();
 
         int total = db.contarFichas();
@@ -108,8 +107,6 @@ public void refresh() {
         completasLbl.setText(String.valueOf(completas));
         alertasLbl.setText(String.valueOf(alertas));
         erroresLbl.setText(String.valueOf(errores));
-
-        db.desconectar();
 
     } catch (Exception e) {
         e.printStackTrace();

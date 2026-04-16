@@ -32,7 +32,7 @@ public class ConsultFichasView extends VBox {
     private DashboardView dashboard;
     private FilteredList<Ficha> filtro;
     private Label estadoLabel;
-    
+
     // Referencias a los botones para actualizar contadores
     private ToggleButton toggleEjecucion;
     private ToggleButton toggleFinalizado;
@@ -56,12 +56,11 @@ public class ConsultFichasView extends VBox {
     }
 
     private void cargarDatosGuardados() {
-        try {
-            DatabaseManager db = new DatabaseManager();
+        try (DatabaseManager db = new DatabaseManager()) {
             db.conectar();
             ResultSet rs = db.obtenerFichas();
-
             List<Ficha> listaFichas = new ArrayList<>();
+
             while (rs.next()) {
                 Ficha f = new Ficha();
                 f.setNumero(rs.getInt("numero"));
@@ -78,10 +77,7 @@ public class ConsultFichasView extends VBox {
                 f.setTrimestre(rs.getString("trimestre"));
                 f.setAcuerdo(rs.getString("acuerdo"));
                 f.setEvaluacion(rs.getString("evaluacion"));
-
-                String estadoStr = rs.getString("estado");
-                f.setEstado(EstadoFicha.fromString(estadoStr));
-
+                f.setEstado(EstadoFicha.fromString(rs.getString("estado")));
                 listaFichas.add(f);
             }
 
@@ -91,7 +87,6 @@ public class ConsultFichasView extends VBox {
                 actualizarContadores();
             }
 
-            db.desconectar();
         } catch (Exception e) {
             e.printStackTrace();
         }

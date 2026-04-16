@@ -1,6 +1,7 @@
 package ui.Components;
 
 import database.DatabaseManager;
+import service.SofiaImportService;
 import service.SofiaLoginService;
 import service.SofiaReporteService;
 
@@ -25,48 +26,51 @@ import java.util.concurrent.Executors;
  * Vista de descarga masiva de reportes de aprendices desde SOFIA Plus.
  *
  * Flujo de uso:
- *   1. Usuario ingresa credenciales SOFIA
- *   2. Hace click en "Conectar"
- *   3. Elige carpeta de destino
- *   4. Inicia la descarga masiva
- *   5. Ve el progreso en tiempo real por cada ficha
+ * 1. Usuario ingresa credenciales SOFIA
+ * 2. Hace click en "Conectar"
+ * 3. Elige carpeta de destino
+ * 4. Inicia la descarga masiva
+ * 5. Ve el progreso en tiempo real por cada ficha
+ * 6. Al finalizar, importa automáticamente los XLS a la base de datos
  */
 public class DescargaMasivaView extends VBox {
 
     // ── Servicios ────────────────────────────────────────────────
-    private SofiaLoginService  loginService;
+    private SofiaLoginService loginService;
     private SofiaReporteService reporteService;
+    private SofiaImportService importService;
     private ExecutorService executor;
 
     // ── UI ───────────────────────────────────────────────────────
-    private TextField    txtUsuario;
+    private TextField txtUsuario;
+    private VBox logBox;
     private PasswordField txtContrasena;
-    private Button       btnConectar;
-    private Label        lblEstadoLogin;
+    private Button btnConectar;
+    private Label lblEstadoLogin;
 
-    private TextField    txtCarpeta;
-    private Button       btnCarpeta;
-    private Button       btnDescargar;
-    private Button       btnCancelar;
+    private TextField txtCarpeta;
+    private Button btnCarpeta;
+    private Button btnDescargar;
+    private Button btnCancelar;
 
-    private ProgressBar  progressBar;
-    private Label        lblProgreso;
-    private Label        lblContador;
-    private VBox         logBox;
-    private ScrollPane   logScroll;
+    private ProgressBar progressBar;
+    private Label lblProgreso;
+    private Label lblContador;
+    private TextArea logArea;
+    private ScrollPane logScroll;
 
     private Path carpetaDestino;
     private volatile boolean cancelado = false;
 
     // ── Estilos ──────────────────────────────────────────────────
-    private static final String DARK     = "-fx-background-color: #0f1117;";
-    private static final String CARD     = "-fx-background-color: #13161f; -fx-background-radius: 12;" +
-                                           "-fx-border-color: #2a2d3a; -fx-border-radius: 12; -fx-border-width: 0.5;";
-    private static final String GREEN    = "#39A900";
-    private static final String RED      = "#e24b4a";
-    private static final String YELLOW   = "#d97706";
-    private static final String BLUE     = "#378add";
-    private static final String SUBTEXT  = "-fx-text-fill: #6b7280; -fx-font-size: 11px;";
+    private static final String DARK = "-fx-background-color: #0f1117;";
+    private static final String CARD = "-fx-background-color: #13161f; -fx-background-radius: 12;" +
+            "-fx-border-color: #2a2d3a; -fx-border-radius: 12; -fx-border-width: 0.5;";
+    private static final String GREEN = "#39A900";
+    private static final String RED = "#e24b4a";
+    private static final String YELLOW = "#d97706";
+    private static final String BLUE = "#378add";
+    private static final String SUBTEXT = "-fx-text-fill: #6b7280; -fx-font-size: 11px;";
 
     public DescargaMasivaView() {
         setStyle(DARK);
@@ -146,8 +150,8 @@ public class DescargaMasivaView extends VBox {
         btnCarpeta = new Button("📁  Explorar");
         btnCarpeta.setStyle(
                 "-fx-background-color: #1e2230; -fx-text-fill: #c8ccd8;" +
-                "-fx-font-size: 12px; -fx-background-radius: 8; -fx-cursor: hand;" +
-                "-fx-border-color: #2a2d3a; -fx-border-radius: 8; -fx-padding: 7 12;");
+                        "-fx-font-size: 12px; -fx-background-radius: 8; -fx-cursor: hand;" +
+                        "-fx-border-color: #2a2d3a; -fx-border-radius: 8; -fx-padding: 7 12;");
         btnCarpeta.setOnAction(e -> elegirCarpeta());
 
         HBox carpetaRow = new HBox(8, txtCarpeta, btnCarpeta);
@@ -172,8 +176,7 @@ public class DescargaMasivaView extends VBox {
         sliderDelay.setStyle("-fx-accent: " + GREEN + ";");
         Label lblDelayVal = new Label("2000 ms");
         lblDelayVal.setStyle("-fx-font-size: 11px; -fx-text-fill: #8b92a5;");
-        sliderDelay.valueProperty().addListener((obs, o, n) ->
-                lblDelayVal.setText((int) n.doubleValue() + " ms"));
+        sliderDelay.valueProperty().addListener((obs, o, n) -> lblDelayVal.setText((int) n.doubleValue() + " ms"));
 
         btnDescargar = greenButton("⬇  Iniciar Descarga Masiva");
         btnDescargar.setMaxWidth(Double.MAX_VALUE);
@@ -183,8 +186,8 @@ public class DescargaMasivaView extends VBox {
         btnCancelar = new Button("✕  Cancelar");
         btnCancelar.setStyle(
                 "-fx-background-color: #2d1515; -fx-text-fill: " + RED + ";" +
-                "-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-radius: 8;" +
-                "-fx-cursor: hand; -fx-padding: 8 14;");
+                        "-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-radius: 8;" +
+                        "-fx-cursor: hand; -fx-padding: 8 14;");
         btnCancelar.setMaxWidth(Double.MAX_VALUE);
         btnCancelar.setDisable(true);
         btnCancelar.setOnAction(e -> cancelar());
@@ -227,13 +230,14 @@ public class DescargaMasivaView extends VBox {
 
         // Log de actividad
         logBox = new VBox(4);
-        logBox.setPadding(new Insets(8));
+        logBox.setStyle("-fx-background-color: #0a0c12; -fx-padding: 8;");
+
         logScroll = new ScrollPane(logBox);
         logScroll.setFitToWidth(true);
         logScroll.setPrefHeight(180);
         logScroll.setStyle(
                 "-fx-background-color: #0a0c12; -fx-background: #0a0c12;" +
-                "-fx-border-color: #2a2d3a; -fx-border-radius: 8; -fx-background-radius: 8;");
+                        "-fx-border-color: #2a2d3a; -fx-border-radius: 8; -fx-background-radius: 8;");
 
         VBox card = new VBox(10, t, infoRow, progressBar, logScroll);
         card.setPadding(new Insets(16));
@@ -248,8 +252,9 @@ public class DescargaMasivaView extends VBox {
         icon.setStyle("-fx-text-fill: " + BLUE + "; -fx-font-size: 14px;");
         Label txt = new Label(
                 "Los IDs de los campos JSF (CAMPO_FICHA, BTN_SELECCIONAR, BTN_GENERAR) en SofiaReporteService.java " +
-                "pueden necesitar ajuste según la versión actual de SOFIA Plus. Si una descarga falla con error 'ViewState vacío' " +
-                "o no descarga el archivo, abre DevTools → Network → Payload en el paso que falla y compara los campos con las constantes del servicio.");
+                        "pueden necesitar ajuste según la versión actual de SOFIA Plus. Si una descarga falla con error 'ViewState vacío' "
+                        +
+                        "o no descarga el archivo, abre DevTools → Network → Payload en el paso que falla y compara los campos con las constantes del servicio.");
         txt.setStyle("-fx-font-size: 11px; -fx-text-fill: #8b92a5;");
         txt.setWrapText(true);
         HBox row = new HBox(10, icon, txt);
@@ -257,7 +262,7 @@ public class DescargaMasivaView extends VBox {
         row.setPadding(new Insets(12));
         row.setStyle(
                 "-fx-background-color: #0d1929; -fx-background-radius: 10;" +
-                "-fx-border-color: " + BLUE + "33; -fx-border-radius: 10; -fx-border-width: 0.5;");
+                        "-fx-border-color: " + BLUE + "33; -fx-border-radius: 10; -fx-border-width: 0.5;");
         VBox v = new VBox(row);
         return v;
     }
@@ -266,7 +271,7 @@ public class DescargaMasivaView extends VBox {
 
     private void conectar() {
         String usuario = txtUsuario.getText().trim();
-        String pass    = txtContrasena.getText();
+        String pass = txtContrasena.getText();
         if (usuario.isEmpty() || pass.isEmpty()) {
             setEstadoLogin("Ingresa usuario y contraseña", RED);
             return;
@@ -277,8 +282,8 @@ public class DescargaMasivaView extends VBox {
 
         executor.submit(() -> {
             try {
-                loginService    = new SofiaLoginService();
-                reporteService  = new SofiaReporteService(loginService);
+                loginService = new SofiaLoginService();
+                reporteService = new SofiaReporteService(loginService);
                 loginService.login(usuario, pass);
 
                 Platform.runLater(() -> {
@@ -334,7 +339,7 @@ public class DescargaMasivaView extends VBox {
         executor = Executors.newSingleThreadExecutor();
 
         cancelado = false;
-        reporteService.setCancelado(false);  // Reset cancelado en service
+        reporteService.setCancelado(false);
         btnDescargar.setDisable(true);
         btnCancelar.setDisable(false);
         logBox.getChildren().clear();
@@ -342,36 +347,70 @@ public class DescargaMasivaView extends VBox {
         int total = fichas.size();
         agregarLog("▶ Iniciando descarga de " + total + " fichas...", BLUE);
 
-        reporteService.setProgressCallback((ficha, actual, totalCb, msg, exito) ->
-                Platform.runLater(() -> {
-                    double pct = total > 0 ? (double) actual / total : 0;
-                    progressBar.setProgress(pct);
-                    lblProgreso.setText(msg);
-                    lblContador.setText(actual + " / " + total);
-                    agregarLog((exito ? "  " : "  ") + msg, exito ? GREEN : RED);
-                    logScroll.setVvalue(1.0); // scroll al fondo
-                }));
+        // Callback de progreso de descarga
+        reporteService.setProgressCallback((ficha, actual, totalCb, msg, exito) -> Platform.runLater(() -> {
+            double pct = total > 0 ? (double) actual / total : 0;
+            progressBar.setProgress(pct);
+            lblProgreso.setText(msg);
+            lblContador.setText(actual + " / " + total);
+            agregarLog((exito ? "  " : "  ") + msg, exito ? GREEN : RED);
+            logScroll.setVvalue(1.0);
+        }));
 
         executor.submit(() -> {
+            // ── FASE 1: DESCARGA ──────────────────────────────────
             Map<Integer, Path> resultados = reporteService.descargarMasivo(fichas, carpetaDestino, delayMs);
-            long ok  = resultados.values().stream().filter(p -> p != null).count();
+            long ok = resultados.values().stream().filter(p -> p != null).count();
             long err = resultados.values().stream().filter(p -> p == null).count();
 
-            Platform.runLater(() -> {
-                if (cancelado) {
+            if (cancelado) {
+                Platform.runLater(() -> {
                     lblProgreso.setText("Descarga cancelada");
                     agregarLog("─────────────────────────────────", "#2a2d3a");
-                    agregarLog("✓ Completadas: " + ok + "  |  ✗ Errores: " + err + "  |  ⏹ Canceladas: " + (total - ok - err), YELLOW);
+                    agregarLog("✓ Completadas: " + ok + "  |  ✗ Errores: " + err + "  |  ⏹ Canceladas: "
+                            + (total - ok - err), YELLOW);
+                    btnDescargar.setDisable(false);
+                    btnCancelar.setDisable(true);
+                });
+                return;
+            }
+
+            // ── FASE 2: IMPORTACIÓN AUTOMÁTICA ───────────────────
+            Platform.runLater(() -> {
+                progressBar.setProgress(1.0);
+                lblProgreso.setText("Descarga completada. Iniciando importación...");
+                agregarLog("─────────────────────────────────", "#2a2d3a");
+                agregarLog("✓ Descarga completada: " + ok + "/" + total + " archivos", ok == total ? GREEN : YELLOW);
+                agregarLog("▶ Iniciando importación a base de datos...", BLUE);
+            });
+
+            // Importar archivos descargados
+            importService = new SofiaImportService();
+            importService.setProgressCallback((archivo, nFichas, exito, msg) -> Platform.runLater(() -> {
+                agregarLog("  " + archivo + ": " + msg, exito ? GREEN : RED);
+                logScroll.setVvalue(1.0);
+            }));
+
+            int totalImportados = importService.importarDesdeCarpeta(carpetaDestino);
+
+            // ── FINALIZACIÓN ─────────────────────────────────────
+            Platform.runLater(() -> {
+                agregarLog("─────────────────────────────────", "#2a2d3a");
+                if (totalImportados > 0) {
+                    agregarLog("✅ PROCESO COMPLETADO", GREEN);
+                    agregarLog("📊 Fichas importadas: " + totalImportados, GREEN);
+                    lblProgreso.setText("Importación completada: " + totalImportados + " fichas");
                 } else {
-                    progressBar.setProgress(1.0);
-                    lblProgreso.setText("Descarga completada");
-                    agregarLog("─────────────────────────────────", "#2a2d3a");
-                    agregarLog("✓ Completadas: " + ok + "  |  ✗ Errores: " + err, ok == total ? GREEN : YELLOW);
+                    agregarLog("⚠️ Importación completada sin datos nuevos", YELLOW);
+                    lblProgreso.setText("Importación completada");
                 }
-                lblContador.setText(ok + " / " + total);
                 agregarLog("📁 Archivos en: " + carpetaDestino, BLUE);
                 btnDescargar.setDisable(false);
                 btnCancelar.setDisable(true);
+
+                // Actualizar contador de fichas en BD
+                int nuevoTotal = contarFichasEnBD();
+                agregarLog("📈 Total fichas en BD: " + nuevoTotal, BLUE);
             });
         });
     }
@@ -387,23 +426,21 @@ public class DescargaMasivaView extends VBox {
     // ── Helpers de BD ────────────────────────────────────────────
 
     private int contarFichasEnBD() {
-        try {
-            DatabaseManager db = new DatabaseManager();
+        try (DatabaseManager db = new DatabaseManager()) {
             db.conectar();
-            int n = db.contarFichas();
-            db.desconectar();
-            return n;
-        } catch (Exception e) { return 0; }
+            return db.contarFichas();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     private List<Integer> cargarNumerosFichasDeBD() {
         List<Integer> lista = new ArrayList<>();
-        try {
-            DatabaseManager db = new DatabaseManager();
+        try (DatabaseManager db = new DatabaseManager()) {
             db.conectar();
             ResultSet rs = db.obtenerFichas();
-            while (rs.next()) lista.add(rs.getInt("numero"));
-            db.desconectar();
+            while (rs.next())
+                lista.add(rs.getInt("numero"));
         } catch (Exception e) {
             agregarLog("✗ Error leyendo BD: " + e.getMessage(), RED);
         }
@@ -418,6 +455,7 @@ public class DescargaMasivaView extends VBox {
     }
 
     private void agregarLog(String msg, String color) {
+
         Label lbl = new Label(msg);
         lbl.setStyle("-fx-font-size: 11.5px; -fx-text-fill: " + color + "; -fx-font-family: monospace;");
         lbl.setWrapText(true);
@@ -443,9 +481,9 @@ public class DescargaMasivaView extends VBox {
     private void applyFieldStyle(Control f) {
         f.setStyle(
                 "-fx-background-color: #0a0c12; -fx-text-fill: #e8eaf0;" +
-                "-fx-prompt-text-fill: #4b5263; -fx-background-radius: 8;" +
-                "-fx-border-color: #2a2d3a; -fx-border-radius: 8;" +
-                "-fx-font-size: 12px; -fx-padding: 7 10;");
+                        "-fx-prompt-text-fill: #4b5263; -fx-background-radius: 8;" +
+                        "-fx-border-color: #2a2d3a; -fx-border-radius: 8;" +
+                        "-fx-font-size: 12px; -fx-padding: 7 10;");
         f.setMaxWidth(Double.MAX_VALUE);
     }
 
@@ -453,16 +491,16 @@ public class DescargaMasivaView extends VBox {
         Button b = new Button(text);
         b.setStyle(
                 "-fx-background-color: " + GREEN + "; -fx-text-fill: white;" +
-                "-fx-font-size: 12px; -fx-font-weight: bold;" +
-                "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 14;");
+                        "-fx-font-size: 12px; -fx-font-weight: bold;" +
+                        "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 14;");
         b.setOnMouseEntered(e -> b.setStyle(
                 "-fx-background-color: #2d8a00; -fx-text-fill: white;" +
-                "-fx-font-size: 12px; -fx-font-weight: bold;" +
-                "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 14;"));
+                        "-fx-font-size: 12px; -fx-font-weight: bold;" +
+                        "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 14;"));
         b.setOnMouseExited(e -> b.setStyle(
                 "-fx-background-color: " + GREEN + "; -fx-text-fill: white;" +
-                "-fx-font-size: 12px; -fx-font-weight: bold;" +
-                "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 14;"));
+                        "-fx-font-size: 12px; -fx-font-weight: bold;" +
+                        "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 14;"));
         return b;
     }
 

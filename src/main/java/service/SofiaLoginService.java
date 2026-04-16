@@ -19,19 +19,19 @@ import java.util.regex.Pattern;
  * Maneja login y sesión en SOFIA Plus.
  *
  * Flujo JOSSO (SSO de JBoss):
- *   1. GET  /login/login.faces        → extrae campos del form + cookies
- *   2. POST /josso/signon/login.do    → envía credenciales → redirect
- *   3. Sigue redirects hasta la app   → sesión lista
+ * 1. GET /login/login.faces → extrae campos del form + cookies
+ * 2. POST /josso/signon/login.do → envía credenciales → redirect
+ * 3. Sigue redirects hasta la app → sesión lista
  */
 public class SofiaLoginService {
 
-    private static final String BASE_URL  = "http://senasofiaplus.edu.co";
+    private static final String BASE_URL = "http://senasofiaplus.edu.co";
     private static final String LOGIN_URL = BASE_URL + "/sofia/login/login.faces";
     private static final String JOSSO_URL = BASE_URL + "/josso/signon/login.do";
 
     private final CookieManager cookieManager;
-    private final HttpClient    httpClient;
-    private boolean             loggedIn = false;
+    private final HttpClient httpClient;
+    private boolean loggedIn = false;
 
     public SofiaLoginService() {
         this.cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
@@ -47,43 +47,97 @@ public class SofiaLoginService {
     /** Inicia sesión con las credenciales dadas. Lanza excepción si falla. */
     public void login(String usuario, String contrasena) throws Exception {
         loggedIn = false;
+        System.out.println("═══════════════════════════════════════════════");
+        System.out.println("🔐 INICIANDO LOGIN - Usuario: " + usuario);
+        System.out.println("═══════════════════════════════════════════════");
 
         // 1. GET para obtener cookies iniciales
+        System.out.println("📡 Paso 1: GET login page: " + LOGIN_URL);
         String loginPageHtml = doGet(LOGIN_URL);
+        System.out.println("📄 Response length: " + loginPageHtml.length() + " chars");
+
+        // Log de cookies obtenidas
+        System.out.println("🍪 Cookies después del GET:");
+        for (HttpCookie c : cookieManager.getCookieStore().getCookies()) {
+            System.out.println("   • " + c.getName() + " = " + c.getValue() + " (domain: " + c.getDomain() + ")");
+        }
 
         // 2. Extraer campos ocultos del form JSF/JOSSO
         Map<String, String> formFields = extraerCamposForm(loginPageHtml);
+        System.out.println("📝 Campos del form encontrados: " + formFields.keySet());
 
         // 3. Agregar credenciales
         formFields.put("josso_username", usuario);
         formFields.put("josso_password", contrasena);
-        formFields.put("josso_cmd",      "login");
+        formFields.put("josso_cmd", "login");
+        System.out.println("🔑 Credenciales agregadas al form");
 
         // 4. POST al endpoint JOSSO
         String postUrl = formFields.getOrDefault("action", JOSSO_URL);
-        if (!postUrl.startsWith("http")) postUrl = BASE_URL + postUrl;
-
+        if (!postUrl.startsWith("http"))
+            postUrl = BASE_URL + postUrl;
+        System.out.println("📡 Paso 2: POST a JOSSO: " + postUrl);
         String respBody = doPost(postUrl, formFields);
+        System.out.println("📄 Response length: " + respBody.length() + " chars");
+
+        // Después del POST a JOSSO
+        System.out.println("📡 Paso 3: Navegando a HOME para completar handshake JOSSO...");
+        Thread.sleep(1500); // Dale tiempo al SSO
+        String homeHtml = doGetConVerificacion(BASE_URL + "/sofia/home/principal.faces");
+        System.out.println("📄 HOME response length: " + homeHtml.length());
+
+        // Verificar si realmente entramos
+        if (homeHtml.contains("josso_login") || homeHtml.contains("Redirects the user")) {
+            System.out.println("❌ No se pudo establecer sesión en /sofia/");
+            throw new Exception("JOSSO handshake incompleto. Sesión no establecida.");
+        }
+
+        System.out.println("✅ Sesión establecida en la aplicación");
+        loggedIn = true;
+
+        // Log de cookies después del POST
+        System.out.println("🍪 Cookies después del POST:");
+        for (HttpCookie c : cookieManager.getCookieStore().getCookies()) {
+            System.out.println("   • " + c.getName() + " = " + c.getValue() + " (domain: " + c.getDomain() + ")");
+        }
 
         // 5. Verificar que realmente ingresamos
+        System.out.println("🔍 Verificando login...");
         if (respBody.contains("josso_username") || respBody.contains("Usuario o contraseña")) {
+            System.out.println("❌ Login fallido - el response contiene campos de login");
             throw new Exception("Credenciales incorrectas o login fallido.");
+        }
+
+        // Verificar si hay redirección o contenido de aplicación
+        if (respBody.contains("/sofia/josso_login/") || respBody.contains("Redirects the user")) {
+            System.out.println("⚠️  Response contiene redirección a login:");
+            System.out.println(respBody.substring(0, Math.min(500, respBody.length())));
+            // No lanzar excepción aquí, puede ser normal si hay redirects
         }
 
         loggedIn = true;
         System.out.println("✅ Login exitoso en SOFIA Plus");
+        System.out.println("═══════════════════════════════════════════════");
     }
 
-    public boolean isLoggedIn() { return loggedIn; }
+    public boolean isLoggedIn() {
+        return loggedIn;
+    }
 
-    public HttpClient getHttpClient()     { return httpClient; }
-    public CookieManager getCookieManager() { return cookieManager; }
+    public HttpClient getHttpClient() {
+        return httpClient;
+    }
+
+    public CookieManager getCookieManager() {
+        return cookieManager;
+    }
 
     /** Devuelve todas las cookies actuales como header Cookie */
     public String getCookieHeader() {
         StringBuilder sb = new StringBuilder();
         for (HttpCookie c : cookieManager.getCookieStore().getCookies()) {
-            if (sb.length() > 0) sb.append("; ");
+            if (sb.length() > 0)
+                sb.append("; ");
             sb.append(c.getName()).append("=").append(c.getValue());
         }
         return sb.toString();
@@ -99,7 +153,27 @@ public class SofiaLoginService {
                 .header("Accept", "text/html,application/xhtml+xml")
                 .timeout(Duration.ofSeconds(30))
                 .build();
-        HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+        HttpResponse<String> resp = httpClient.send(req,
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+        return resp.body();
+    }
+
+    public String doGetConVerificacion(String url) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .GET()
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "es-CO,es;q=0.9")
+                .timeout(Duration.ofSeconds(30))
+                .build();
+
+        HttpResponse<String> resp = httpClient.send(req,
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+
+        // Log de URL final para diagnóstico
+        System.out.println("DEBUG URL final tras redirects: " + resp.uri());
+        System.out.println("DEBUG Status code: " + resp.statusCode());
         return resp.body();
     }
 
@@ -116,7 +190,8 @@ public class SofiaLoginService {
                 .header("Referer", referer)
                 .timeout(Duration.ofSeconds(30))
                 .build();
-        HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+        HttpResponse<String> resp = httpClient.send(req,
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
         return resp.body();
     }
 
@@ -142,12 +217,13 @@ public class SofiaLoginService {
         // Buscar action del form
         Pattern actionPat = Pattern.compile("<form[^>]+action=[\"']([^\"']+)[\"']", Pattern.CASE_INSENSITIVE);
         Matcher actionM = actionPat.matcher(html);
-        if (actionM.find()) fields.put("action", actionM.group(1));
+        if (actionM.find())
+            fields.put("action", actionM.group(1));
 
         // Buscar inputs hidden
         Pattern inputPat = Pattern.compile("<input[^>]+type=[\"']hidden[\"'][^>]*>", Pattern.CASE_INSENSITIVE);
-        Pattern namePat  = Pattern.compile("name=[\"']([^\"']+)[\"']");
-        Pattern valPat   = Pattern.compile("value=[\"']([^\"']*)[\"']");
+        Pattern namePat = Pattern.compile("name=[\"']([^\"']+)[\"']");
+        Pattern valPat = Pattern.compile("value=[\"']([^\"']*)[\"']");
         Matcher inputM = inputPat.matcher(html);
         while (inputM.find()) {
             String tag = inputM.group();
@@ -155,7 +231,7 @@ public class SofiaLoginService {
             Matcher vm = valPat.matcher(tag);
             if (nm.find()) {
                 String name = nm.group(1);
-                String val  = vm.find() ? vm.group(1) : "";
+                String val = vm.find() ? vm.group(1) : "";
                 fields.put(name, val);
             }
         }
@@ -167,13 +243,15 @@ public class SofiaLoginService {
         Pattern p = Pattern.compile("id=[\"']javax\\.faces\\.ViewState[\"'][^>]*value=[\"']([^\"']+)[\"']",
                 Pattern.CASE_INSENSITIVE);
         Matcher m = p.matcher(html);
-        if (m.find()) return m.group(1);
+        if (m.find())
+            return m.group(1);
 
         // Orden alternativo de atributos
         Pattern p2 = Pattern.compile("name=[\"']javax\\.faces\\.ViewState[\"'][^>]*value=[\"']([^\"']+)[\"']",
                 Pattern.CASE_INSENSITIVE);
         Matcher m2 = p2.matcher(html);
-        if (m2.find()) return m2.group(1);
+        if (m2.find())
+            return m2.group(1);
 
         return "";
     }
@@ -182,7 +260,8 @@ public class SofiaLoginService {
     public static String buildFormBody(Map<String, String> fields) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String, String> e : fields.entrySet()) {
-            if (sb.length() > 0) sb.append("&");
+            if (sb.length() > 0)
+                sb.append("&");
             sb.append(encode(e.getKey())).append("=").append(encode(e.getValue()));
         }
         return sb.toString();
