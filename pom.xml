@@ -14,9 +14,9 @@
     <description>Sistema de Validación y Gestión de Fichas SENA</description>
 
     <properties>
-        <!-- ✅ FIX 1: Java 17 (JavaFX 21 requiere mínimo Java 17) -->
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <!-- ✅ UPGRADED: Java 25 (Latest LTS, compatible with JavaFX 21) -->
+        <maven.compiler.source>25</maven.compiler.source>
+        <maven.compiler.target>25</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <javafx.version>21.0.2</javafx.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
@@ -91,9 +91,9 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <!-- ✅ FIX 4: Debe coincidir con properties arriba -->
-                    <source>17</source>
-                    <target>17</target>
+                    <!-- ✅ UPGRADED: Must match properties (Java 25) -->
+                    <source>25</source>
+                    <target>25</target>
                 </configuration>
             </plugin>
             
