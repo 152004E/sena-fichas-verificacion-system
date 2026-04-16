@@ -1,6 +1,5 @@
 package service;
 
-
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,22 +14,24 @@ import java.util.regex.Pattern;
  * Descarga el reporte XLS de aprendices desde SOFIA Plus.
  *
  * FLUJO (7 pasos obligatorios):
- *   Paso 0 — POST /sofia/home/principal.
- * faces      → iniciar sesión
- *   Paso 1 — GET  /reporteAprendices.faces         → HTML con ViewState + conversationContext
- *   Paso 2 — GET  /modalFicha.faces                → modal inicial con nuevo conversationContext
- *   Paso 3 — POST /modalFicha.faces (búsqueda)    → POST primera búsqueda de ficha
- *   Paso 4 — POST /modalFicha.faces (selección)   → seleccionar ficha (cierra modal)
- *   Paso 5 — POST /reporteAprendices.faces         → descargar XLS
+ * Paso 0 — POST /sofia/home/principal.
+ * faces → iniciar sesión
+ * Paso 1 — GET /reporteAprendices.faces → HTML con ViewState +
+ * conversationContext
+ * Paso 2 — GET /modalFicha.faces → modal inicial con nuevo conversationContext
+ * Paso 3 — POST /modalFicha.faces (búsqueda) → POST primera búsqueda de ficha
+ * Paso 4 — POST /modalFicha.faces (selección) → seleccionar ficha (cierra
+ * modal)
+ * Paso 5 — POST /reporteAprendices.faces → descargar XLS
  *
- * ⚠️  IMPORTANTE PARA EL MANTENEDOR:
- *   Los nombres de los campos JSF (form ID, botón ID) y los query parameters
- *   (conversationContext, centro, estado2) pueden cambiar si SOFIA actualiza
- *   su versión. Si algo falla, inspecciona el HTML con DevTools.
+ * ⚠️ IMPORTANTE PARA EL MANTENEDOR:
+ * Los nombres de los campos JSF (form ID, botón ID) y los query parameters
+ * (conversationContext, centro, estado2) pueden cambiar si SOFIA actualiza
+ * su versión. Si algo falla, inspecciona el HTML con DevTools.
  */
 public class SofiaReporteService {
 
-    private static final String BASE_URL    = "http://senasofiaplus.edu.co";
+    private static final String BASE_URL = "http://senasofiaplus.edu.co";
     private static final String HOME_URL = BASE_URL + "/sofia/home/principal.faces";
     private static final String REPORTE_URL_BASE = BASE_URL +
             "/sofia/ejecucionformacion/reportes/reporteAprendices.faces";
@@ -52,8 +53,8 @@ public class SofiaReporteService {
 
     // ── Estado interno ───────────────────────────────────────────
     private final SofiaLoginService loginService;
-    private ProgressCallback        callback;
-    private volatile boolean        cancelado = false;
+    private ProgressCallback callback;
+    private volatile boolean cancelado = false;
 
     // ── Constructor ──────────────────────────────────────────────
     public SofiaReporteService(SofiaLoginService loginService) {
@@ -64,26 +65,30 @@ public class SofiaReporteService {
     @FunctionalInterface
     public interface ProgressCallback {
         /**
-         * @param ficha    número de ficha actual
-         * @param actual   índice 1-based
-         * @param total    total de fichas
-         * @param mensaje  descripción del paso
-         * @param exito    true = OK, false = error
+         * @param ficha   número de ficha actual
+         * @param actual  índice 1-based
+         * @param total   total de fichas
+         * @param mensaje descripción del paso
+         * @param exito   true = OK, false = error
          */
         void onProgreso(int ficha, int actual, int total, String mensaje, boolean exito);
     }
 
-    public void setProgressCallback(ProgressCallback cb) { this.callback = cb; }
+    public void setProgressCallback(ProgressCallback cb) {
+        this.callback = cb;
+    }
 
-    public void setCancelado(boolean cancelado) { this.cancelado = cancelado; }
+    public void setCancelado(boolean cancelado) {
+        this.cancelado = cancelado;
+    }
 
     // ── API pública ──────────────────────────────────────────────
 
     /**
      * Descarga el XLS de aprendices para una sola ficha.
      *
-     * @param numeroFicha  número de la ficha SENA
-     * @param dirDestino   carpeta donde guardar el archivo
+     * @param numeroFicha número de la ficha SENA
+     * @param dirDestino  carpeta donde guardar el archivo
      * @return Path del archivo descargado
      */
     public Path descargarReporteFicha(int numeroFicha, Path dirDestino) throws Exception {
@@ -99,8 +104,10 @@ public class SofiaReporteService {
         for (var c : loginService.getCookieManager().getCookieStore().getCookies()) {
             System.out.println("   • " + c.getName() + " = " + c.getValue());
         }
-        // POST con body vacío a HOME para asegurar que la sesión se propaga al contexto /sofia/
-        // CRÍTICO: Debe ser POST, no GET. El navegador lo hace automáticamente después del login.
+        // POST con body vacío a HOME para asegurar que la sesión se propaga al contexto
+        // /sofia/
+        // CRÍTICO: Debe ser POST, no GET. El navegador lo hace automáticamente después
+        // del login.
         String homeResp = loginService.doPost(HOME_URL, new HashMap<>());
         System.out.println("📄 Paso 0: HOME response length = " + homeResp.length() + " chars");
         if (homeResp.contains("josso_login") || homeResp.contains("Redirects the user")) {
@@ -118,7 +125,7 @@ public class SofiaReporteService {
         System.out.println("DEBUG Paso 1: GET " + urlReportePaso1);
         String htmlReporte = loginService.doGet(urlReportePaso1);
         System.out.println("DEBUG Paso 1: Response length = " + htmlReporte.length() + " chars");
-        
+
         // Detectar si redirige a login (sesión aún inválida)
         if (htmlReporte.contains("josso_login") || htmlReporte.contains("Redirects the user")) {
             System.out.println("WARN Paso 1: Sesión rechazada, reiniciando...");
@@ -129,14 +136,15 @@ public class SofiaReporteService {
             Thread.sleep(1000);
             htmlReporte = loginService.doGet(urlReportePaso1);
         }
-        
+
         String viewState1 = SofiaLoginService.extraerViewState(htmlReporte);
         System.out.println("DEBUG Paso 1: ViewState encontrado = " + (!viewState1.isEmpty()));
         String conversationContext1 = extraerConversationContext(htmlReporte);
         System.out.println("DEBUG Paso 1: ConversationContext = " + conversationContext1);
 
         if (viewState1.isEmpty()) {
-            System.out.println("DEBUG Paso 1: HTML fragment: " + htmlReporte.substring(0, Math.min(500, htmlReporte.length())));
+            System.out.println(
+                    "DEBUG Paso 1: HTML fragment: " + htmlReporte.substring(0, Math.min(500, htmlReporte.length())));
             throw new Exception("ViewState vacío en reporte. La sesión puede haber expirado.");
         }
 
@@ -182,9 +190,9 @@ public class SofiaReporteService {
      * Descarga reportes XLS para una lista de fichas.
      * Continúa aunque alguna falle. Respeta un delay entre requests.
      *
-     * @param fichas      lista de números de ficha
-     * @param dirDestino  carpeta destino
-     * @param delayMs     milisegundos entre requests (recomendado: 1500–3000)
+     * @param fichas     lista de números de ficha
+     * @param dirDestino carpeta destino
+     * @param delayMs    milisegundos entre requests (recomendado: 1500–3000)
      * @return mapa ficha → Path (null si falló)
      */
     public Map<Integer, Path> descargarMasivo(
@@ -218,7 +226,9 @@ public class SofiaReporteService {
 
             // Pausa entre requests para no sobrecargar el servidor
             if (i < total - 1) {
-                try { Thread.sleep(delayMs); } catch (InterruptedException ex) {
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
                     break;
                 }
@@ -249,28 +259,28 @@ public class SofiaReporteService {
      * Paso 3: POST primera búsqueda de ficha en el modal.
      * 
      * @param numeroFicha número de ficha a buscar
-     * @param viewState ViewState del modal
-     * @param urlModal URL del modal con conversationContext
+     * @param viewState   ViewState del modal
+     * @param urlModal    URL del modal con conversationContext
      * @return HTML con resultados de búsqueda
      */
-    private String buscarFichaEnModal(int numeroFicha, String viewState, String urlModal) 
+    private String buscarFichaEnModal(int numeroFicha, String viewState, String urlModal)
             throws Exception {
         Map<String, String> campos = new LinkedHashMap<>();
-        campos.put("form:hiddenFocoPagina",      "");
-        campos.put(CAMPO_FICHA_MODAL,            String.valueOf(numeroFicha));
-        campos.put("form:departamentoSOM",       "");
-        campos.put("fechaInicialICL",            "");
-        campos.put("form:jornadaSOM",            "");
-        campos.put("fechaFinalICL",              "");
-        campos.put(BTN_BUSCAR_MODAL,             "Consultar");  // ⚠️ Texto exacto
-        campos.put("form_SUBMIT",                "1");
-        campos.put("form:_link_hidden_",         "");
-        campos.put("form:_idcl",                 "");
-        campos.put("javax.faces.ViewState",     viewState);
+        campos.put("form:hiddenFocoPagina", "");
+        campos.put(CAMPO_FICHA_MODAL, String.valueOf(numeroFicha));
+        campos.put("form:departamentoSOM", "");
+        campos.put("fechaInicialICL", "");
+        campos.put("form:jornadaSOM", "");
+        campos.put("fechaFinalICL", "");
+        campos.put(BTN_BUSCAR_MODAL, "Consultar"); // ⚠️ Texto exacto
+        campos.put("form_SUBMIT", "1");
+        campos.put("form:_link_hidden_", "");
+        campos.put("form:_idcl", "");
+        campos.put("javax.faces.ViewState", viewState);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Referer", urlModal);
-        headers.put("Origin",  "http://senasofiaplus.edu.co");
+        headers.put("Origin", "http://senasofiaplus.edu.co");
 
         String rawBody = SofiaLoginService.buildFormBody(campos);
         byte[] respBytes = loginService.doPostBytes(urlModal, rawBody, headers);
@@ -281,27 +291,27 @@ public class SofiaReporteService {
      * Paso 4: POST para seleccionar la ficha encontrada (cierra modal).
      * 
      * @param numeroFicha número de ficha
-     * @param viewState ViewState de la búsqueda anterior
-     * @param urlModal URL del modal con conversationContext
+     * @param viewState   ViewState de la búsqueda anterior
+     * @param urlModal    URL del modal con conversationContext
      * @return HTML después de seleccionar (modal cerrado)
      */
     private String seleccionarFichaEnModal(int numeroFicha, String viewState, String urlModal)
             throws Exception {
         Map<String, String> campos = new LinkedHashMap<>();
-        campos.put("form:hiddenFocoPagina",      "");
-        campos.put(BTN_BUSCAR_MODAL,             "");  // Vacío en la segunda búsqueda
-        campos.put(CAMPO_FICHA_MODAL,            String.valueOf(numeroFicha));
-        campos.put("form:departamentoSOM",       "");
-        campos.put("fechaInicialICL",            "");
-        campos.put("form:jornadaSOM",            "");
-        campos.put("fechaFinalICL",              "");
-        campos.put("form_SUBMIT",                "1");
-        campos.put("form:_link_hidden_",         "");
-        campos.put("javax.faces.ViewState",     viewState);
+        campos.put("form:hiddenFocoPagina", "");
+        campos.put(BTN_BUSCAR_MODAL, ""); // Vacío en la segunda búsqueda
+        campos.put(CAMPO_FICHA_MODAL, String.valueOf(numeroFicha));
+        campos.put("form:departamentoSOM", "");
+        campos.put("fechaInicialICL", "");
+        campos.put("form:jornadaSOM", "");
+        campos.put("fechaFinalICL", "");
+        campos.put("form_SUBMIT", "1");
+        campos.put("form:_link_hidden_", "");
+        campos.put("javax.faces.ViewState", viewState);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Referer", urlModal);
-        headers.put("Origin",  "http://senasofiaplus.edu.co");
+        headers.put("Origin", "http://senasofiaplus.edu.co");
 
         String rawBody = SofiaLoginService.buildFormBody(campos);
         byte[] respBytes = loginService.doPostBytes(urlModal, rawBody, headers);
@@ -311,31 +321,31 @@ public class SofiaReporteService {
     /**
      * Paso 5: POST para generar y descargar el reporte XLS.
      * 
-     * @param numeroFicha número de ficha
-     * @param viewState ViewState del paso anterior (modal)
-     * @param urlReporte URL con conversationContext actualizado
+     * @param numeroFicha        número de ficha
+     * @param viewState          ViewState del paso anterior (modal)
+     * @param urlReporte         URL con conversationContext actualizado
      * @param htmlModalRespuesta HTML de la respuesta modal para extraer descripción
      * @return bytes del archivo XLS
      */
-    private byte[] generarReporte(int numeroFicha, String viewState, String urlReporte, 
-                                  String htmlModalRespuesta) throws Exception {
+    private byte[] generarReporte(int numeroFicha, String viewState, String urlReporte,
+            String htmlModalRespuesta) throws Exception {
         // Extraer la descripción de la ficha del HTML modal
         // Formato esperado: "Ficha 3334496 (OPERACIONES COMERCIALES EN RETAIL)"
         String descripcionFicha = extraerDescripcionFicha(htmlModalRespuesta, numeroFicha);
 
         Map<String, String> campos = new LinkedHashMap<>();
-        campos.put(VALOR_CAMPO,                  "frmForma1:" + CAMPO_FICHA_REPORTE);
-        campos.put(HI_CAMPO_FICHA_REPORTE,       String.valueOf(numeroFicha));
-        campos.put(CAMPO_FICHA_REPORTE,          descripcionFicha);
-        campos.put(BTN_GENERAR_REPORTE,          "Generar Reporte");
-        campos.put("frmForma1_SUBMIT",           "1");
-        campos.put("frmForma1:_link_hidden_",    "");
-        campos.put("frmForma1:_idcl",            "");
-        campos.put("javax.faces.ViewState",     viewState);
+        campos.put(VALOR_CAMPO, "frmForma1:" + CAMPO_FICHA_REPORTE);
+        campos.put(HI_CAMPO_FICHA_REPORTE, String.valueOf(numeroFicha));
+        campos.put(CAMPO_FICHA_REPORTE, descripcionFicha);
+        campos.put(BTN_GENERAR_REPORTE, "Generar Reporte");
+        campos.put("frmForma1_SUBMIT", "1");
+        campos.put("frmForma1:_link_hidden_", "");
+        campos.put("frmForma1:_idcl", "");
+        campos.put("javax.faces.ViewState", viewState);
 
         Map<String, String> headers = new HashMap<>();
         headers.put("Referer", REPORTE_URL_BASE + "?menId=79&fwkmenu=si");
-        headers.put("Origin",  "http://senasofiaplus.edu.co");
+        headers.put("Origin", "http://senasofiaplus.edu.co");
 
         String rawBody = SofiaLoginService.buildFormBody(campos);
         return loginService.doPostBytes(urlReporte, rawBody, headers);
@@ -360,5 +370,52 @@ public class SofiaReporteService {
         if (callback != null) {
             callback.onProgreso(ficha, actual, total, msg, exito);
         }
+    }
+
+    private String doGetIframe(String url, String referer) throws Exception {
+
+        String cookieHeader = loginService.getCookieManager()
+                .getCookieStore()
+                .getCookies()
+                .stream()
+                .map(c -> c.getName() + "=" + c.getValue())
+                .collect(java.util.stream.Collectors.joining("; "));
+
+        System.out.println("🍪 Cookies iframe: " + cookieHeader);
+
+        java.net.http.HttpRequest req = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .GET()
+
+                // ── Simular navegador real ──
+                .header("User-Agent",
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "es-CO,es;q=0.9")
+
+                // 🔥 CRÍTICOS
+                .header("Referer", referer)
+                .header("Origin", "http://senasofiaplus.edu.co") // ← FALTABA
+                .header("Cookie", cookieHeader)
+
+                // 🔥 IFRAME
+                .header("Sec-Fetch-Dest", "iframe")
+                .header("Sec-Fetch-Mode", "navigate")
+                .header("Sec-Fetch-Site", "same-origin")
+                .header("Sec-Fetch-User", "?1")
+
+                // 🔥 EXTRA (importante)
+                .header("Upgrade-Insecure-Requests", "1")
+
+                .timeout(java.time.Duration.ofSeconds(30))
+                .build();
+
+        var resp = loginService.getHttpClient()
+                .send(req, java.net.http.HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+
+        System.out.println("DEBUG iframe GET status: " + resp.statusCode());
+        System.out.println("DEBUG iframe length: " + resp.body().length());
+
+        return resp.body();
     }
 }

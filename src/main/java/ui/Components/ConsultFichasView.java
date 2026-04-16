@@ -39,6 +39,12 @@ public class ConsultFichasView extends VBox {
     private ToggleButton toggleTecnologo;
     private ToggleButton toggleTecnico;
 
+    // Vistas y toggle de modo
+    private TableView<Ficha> tableView;
+    private ListView<Ficha> cardsView;
+    private ToggleButton btnVistaTabla;
+    private ToggleButton btnVistaTarjetas;
+
     public void setDashboard(DashboardView dashboard) {
         this.dashboard = dashboard;
     }
@@ -53,6 +59,37 @@ public class ConsultFichasView extends VBox {
         VBox.setVgrow(this, Priority.ALWAYS);
         getChildren().addAll(buildHeroBanner(), buildTableSection());
         cargarDatosGuardados();
+    }
+
+    private void cambiarVista(String vista) {
+        boolean mostrarTabla = "tabla".equals(vista);
+        boolean mostrarTarjetas = "tarjetas".equals(vista);
+
+        tableView.setVisible(mostrarTabla);
+        tableView.setManaged(mostrarTabla);
+
+        if (cardsView != null) {
+            cardsView.setVisible(mostrarTarjetas);
+            cardsView.setManaged(mostrarTarjetas);
+        }
+
+        btnVistaTabla.setSelected(mostrarTabla);
+        btnVistaTarjetas.setSelected(mostrarTarjetas);
+
+        btnVistaTabla.setStyle(getViewToggleStyle(mostrarTabla));
+        btnVistaTarjetas.setStyle(getViewToggleStyle(mostrarTarjetas));
+    }
+
+    private String getViewToggleStyle(boolean active) {
+        if (active) {
+            return "-fx-background-color: #39A900; -fx-text-fill: white; " +
+                    "-fx-background-radius: 6; -fx-padding: 6 12 6 12; " +
+                    "-fx-font-size: 11px; -fx-font-weight: bold;";
+        } else {
+            return "-fx-background-color: rgba(255,255,255,0.08); -fx-text-fill: #8b92a5; " +
+                    "-fx-background-radius: 6; -fx-padding: 6 12 6 12; " +
+                    "-fx-font-size: 11px; -fx-border-color: rgba(255,255,255,0.15); -fx-border-radius: 6;";
+        }
     }
 
     private void cargarDatosGuardados() {
@@ -190,7 +227,7 @@ public class ConsultFichasView extends VBox {
 
     // ── Sección de tabla ─────────────────────────────────────────
     private VBox buildTableSection() {
-        // Header row: estado + botón cargar
+        // Header row: estado + botón cargar + toggle vistas
         estadoLabel = new Label("Selecciona un archivo Excel para iniciar");
         estadoLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #8b92a5;");
 
@@ -209,20 +246,44 @@ public class ConsultFichasView extends VBox {
                         "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 7 14 7 14;"));
         btnCargar.setOnAction(e -> cargarArchivo(btnCargar));
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        // Toggle de vistas
+        Label lblVista = new Label("VISTA:");
+        lblVista.setStyle("-fx-font-size: 9px; -fx-text-fill: #4b5263; -fx-letter-spacing: 0.08em;");
 
-        HBox headerRow = new HBox(12, estadoLabel, spacer, btnCargar);
+        btnVistaTabla = new ToggleButton("📊 Tabla");
+        btnVistaTarjetas = new ToggleButton("🎴 Tarjetas");
+
+        btnVistaTabla.setSelected(true);
+        btnVistaTabla.setStyle(getViewToggleStyle(true));
+        btnVistaTarjetas.setStyle(getViewToggleStyle(false));
+
+        btnVistaTabla.setOnAction(e -> cambiarVista("tabla"));
+        btnVistaTarjetas.setOnAction(e -> cambiarVista("tarjetas"));
+
+        HBox vistaToggles = new HBox(6, btnVistaTabla, btnVistaTarjetas);
+        vistaToggles.setAlignment(Pos.CENTER);
+        vistaToggles.setStyle("-fx-padding: 0 0 0 12;");
+
+        Region spacer1 = new Region();
+        HBox.setHgrow(spacer1, Priority.ALWAYS);
+
+        HBox headerRow = new HBox(12, estadoLabel, spacer1, lblVista, vistaToggles, btnCargar);
         headerRow.setAlignment(Pos.CENTER_LEFT);
         headerRow.setPadding(new Insets(0, 16, 10, 16));
 
         // Tabla
-        TableView<Ficha> table = buildTable();
+        tableView = buildTable();
         filtro = new FilteredList<>(fichas, p -> true);
-        table.setItems(filtro);
-        VBox.setVgrow(table, Priority.ALWAYS);
+        tableView.setItems(filtro);
+        VBox.setVgrow(tableView, Priority.ALWAYS);
 
-        VBox section = new VBox(10, headerRow, table);
+        // Vista de tarjetas
+        cardsView = buildCardsView();
+        cardsView.setItems(filtro);
+        cardsView.setVisible(false);
+        cardsView.setManaged(false);
+
+        VBox section = new VBox(10, headerRow, tableView, cardsView);
         section.setPadding(new Insets(10, 16, 16, 16));
         VBox.setVgrow(section, Priority.ALWAYS);
         section.setStyle(DARK_BG);
@@ -445,6 +506,188 @@ public class ConsultFichasView extends VBox {
         Label lbl = new Label("Sin datos. Carga un archivo Excel para comenzar.");
         lbl.setStyle("-fx-text-fill: #4b5263; -fx-font-size: 13px;");
         return lbl;
+    }
+
+    // ── Vista de Lista ───────────────────────────────────────────
+    private VBox buildListView() {
+        VBox listContainer = new VBox(8);
+        listContainer.setStyle("-fx-background-color: #13161f; -fx-background-radius: 10;" +
+                      "-fx-border-color: #2a2d3a; -fx-border-radius: 10; -fx-border-width: 0.5;");
+
+        VBox list = new VBox(8);
+        list.setPadding(new Insets(8));
+
+        for (Ficha f : fichas) {
+            list.getChildren().add(buildListItem(f));
+        }
+
+        fichas.addListener((javafx.collections.ListChangeListener.Change<? extends Ficha> c) -> {
+            list.getChildren().clear();
+            for (Ficha f : fichas) {
+                list.getChildren().add(buildListItem(f));
+            }
+        });
+
+        ScrollPane scroll = new ScrollPane(list);
+        scroll.setFitToWidth(true);
+        scroll.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
+        scroll.setPadding(new Insets(8));
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        listContainer.getChildren().add(scroll);
+        return listContainer;
+    }
+
+    private HBox buildListItem(Ficha f) {
+        Label num = new Label(String.valueOf(f.getNumero()));
+        num.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #39A900;" +
+                     "-fx-min-width: 60; -fx-alignment: center-left;");
+
+        VBox info = new VBox(4);
+        Label prog = new Label(f.getPrograma());
+        prog.setStyle("-fx-font-size: 12px; -fx-text-fill: #e8eaf0;");
+        Label nivel = new Label(f.getNivel() + " • " + f.getEstado().getLabel());
+        nivel.setStyle("-fx-font-size: 10px; -fx-text-fill: #6b7280;");
+        info.getChildren().addAll(prog, nivel);
+        VBox.setVgrow(info, Priority.ALWAYS);
+
+        Label fechas = new Label(f.getFechaInicio() + " → " + f.getFechaFin());
+        fechas.setStyle("-fx-font-size: 10px; -fx-text-fill: #8b92a5;");
+
+        FontIcon iconEye = new FontIcon("fas-eye");
+        iconEye.setIconSize(14);
+        iconEye.setIconColor(Color.WHITE);
+        Button btnVer = new Button("Ver", iconEye);
+        btnVer.setStyle("-fx-background-color: #1e2230; -fx-text-fill: #c8ccd8;" +
+                        "-fx-background-radius: 6; -fx-padding: 4 10; -fx-cursor: hand;" +
+                        "-fx-font-size: 11px; -fx-border-color: #2a2d3a; -fx-border-radius: 6;");
+        btnVer.setOnAction(e -> mostrarModalDetalle(f));
+
+        HBox item = new HBox(12, num, info, fechas, btnVer);
+        item.setPadding(new Insets(10, 12, 10, 12));
+        item.setStyle("-fx-background-color: #0a0c12; -fx-background-radius: 8;" +
+                      "-fx-border-color: #2a2d3a; -fx-border-radius: 8; -fx-border-width: 0.5;");
+        item.setAlignment(Pos.CENTER_LEFT);
+
+        item.setOnMouseEntered(e -> item.setStyle(
+                "-fx-background-color: #1e2230; -fx-background-radius: 8;" +
+                "-fx-border-color: #39A900; -fx-border-radius: 8; -fx-border-width: 0.5;"));
+        item.setOnMouseExited(e -> item.setStyle(
+                "-fx-background-color: #0a0c12; -fx-background-radius: 8;" +
+                "-fx-border-color: #2a2d3a; -fx-border-radius: 8; -fx-border-width: 0.5;"));
+
+        HBox.setHgrow(info, Priority.ALWAYS);
+        return item;
+    }
+
+    // ── Vista de Tarjetas (Dashboard) ────────────────────────────
+    private ListView<Ficha> buildCardsView() {
+        ListView<Ficha> cardsList = new ListView<>();
+        cardsList.setStyle(
+                "-fx-background-color: #13161f; -fx-background-radius: 10; " +
+                "-fx-border-color: #2a2d3a; -fx-border-radius: 10; -fx-border-width: 0.5; " +
+                "-fx-control-inner-background: transparent;");
+        cardsList.setPlaceholder(buildPlaceholder());
+        cardsList.setCellFactory(list -> new ListCell<>() {
+            @Override
+            protected void updateItem(Ficha ficha, boolean empty) {
+                super.updateItem(ficha, empty);
+                if (empty || ficha == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    VBox card = buildCard(ficha);
+                    card.setMaxWidth(Double.MAX_VALUE);
+                    setGraphic(card);
+                    setText(null);
+                }
+                setStyle("-fx-background-color: transparent; -fx-padding: 0;");
+            }
+        });
+        cardsList.setFocusTraversable(false);
+        return cardsList;
+    }
+
+    private VBox buildCard(Ficha f) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(14));
+        card.setStyle(
+                "-fx-background-color: #0a0c12; -fx-background-radius: 12;" +
+                "-fx-border-color: #2a2d3a; -fx-border-radius: 12; -fx-border-width: 0.5;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 2);");
+
+        // Header: número y estado
+        HBox header = new HBox();
+        header.setAlignment(Pos.CENTER_LEFT);
+
+        Label numLabel = new Label("Ficha #" + f.getNumero());
+        numLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #39A900;");
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label estadoBadge = new Label(f.getEstado().getLabel());
+        String badgeStyle;
+        if (f.getEstado().getLabel().toLowerCase().contains("completa") ||
+            f.getEstado().getLabel().toLowerCase().contains("ok")) {
+            badgeStyle = "-fx-background-color: #1c3a12; -fx-text-fill: #5ed01a; -fx-background-radius: 20; -fx-padding: 3 10; -fx-font-size: 10px;";
+        } else if (f.getEstado().getLabel().toLowerCase().contains("error") ||
+                   f.getEstado().getLabel().toLowerCase().contains("crítico")) {
+            badgeStyle = "-fx-background-color: #2d1515; -fx-text-fill: #e24b4a; -fx-background-radius: 20; -fx-padding: 3 10; -fx-font-size: 10px;";
+        } else {
+            badgeStyle = "-fx-background-color: #2a2010; -fx-text-fill: #d97706; -fx-background-radius: 20; -fx-padding: 3 10; -fx-font-size: 10px;";
+        }
+        estadoBadge.setStyle(badgeStyle);
+
+        header.getChildren().addAll(numLabel, spacer, estadoBadge);
+
+        // Info grid
+        GridPane infoGrid = new GridPane();
+        infoGrid.setHgap(8);
+        infoGrid.setVgap(8);
+
+        int row = 0;
+        infoGrid.add(createInfoLabel("Programa:", f.getPrograma(), true), 0, row++);
+        infoGrid.add(createInfoLabel("Nivel:", f.getNivel(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Inicio:", f.getFechaInicio(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Fin Lec:", f.getFechaFinLec(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Fin:", f.getFechaFin(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Trimestre:", f.getTrimestre(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Aprendices:", String.valueOf(f.getAprendices()), false), 0, row++);
+
+        // Instructores
+        Separator sep1 = new Separator();
+        sep1.setStyle("-fx-background-color: #2a2d3a; -fx-padding: 2 0;");
+        infoGrid.add(sep1, 0, row++);
+        GridPane.setColumnSpan(sep1, 1);
+
+        infoGrid.add(createInfoLabel("Instructor 2025:", f.getInstructorTecnico2025(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Bilingüismo:", f.getInstructorBilinguismo(), false), 0, row++);
+        infoGrid.add(createInfoLabel("Instructor 2026:", f.getInstructorTecnico2026(), false), 0, row++);
+
+        // Botones de acción
+        Button btnVer = new Button("👁 Ver Detalles");
+        btnVer.setMaxWidth(Double.MAX_VALUE);
+        btnVer.setStyle(
+                "-fx-background-color: #39A900; -fx-text-fill: white;" +
+                "-fx-font-size: 11px; -fx-font-weight: bold;" +
+                "-fx-background-radius: 8; -fx-cursor: hand; -fx-padding: 8 12;");
+        btnVer.setOnAction(e -> mostrarModalDetalle(f));
+
+        card.getChildren().addAll(header, infoGrid, btnVer);
+        return card;
+    }
+
+    private VBox createInfoLabel(String label, String value, boolean highlight) {
+        VBox box = new VBox(2);
+        Label lbl = new Label(label);
+        lbl.setStyle("-fx-font-size: 9px; -fx-text-fill: #4b5263; -fx-letter-spacing: 0.05em;");
+        Label val = new Label(value != null ? value : "—");
+        val.setStyle("-fx-font-size: 11px; -fx-text-fill: " + (highlight ? "#39A900" : "#e8eaf0") + ";" +
+                     "-fx-wrap-text: true;");
+        val.setWrapText(true);
+        box.getChildren().addAll(lbl, val);
+        return box;
     }
 
     public void applySearch(String term) {
