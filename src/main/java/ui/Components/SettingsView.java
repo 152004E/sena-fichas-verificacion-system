@@ -12,7 +12,7 @@ public class SettingsView extends VBox {
         setSpacing(12);
         VBox.setVgrow(this, Priority.ALWAYS);
 
-        Label title = new Label("Settings");
+        Label title = new Label("Configuración");
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #e8eaf0;");
 
         Label sub = new Label("Configuración general de la aplicación");

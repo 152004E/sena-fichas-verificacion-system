@@ -1,6 +1,8 @@
 package database;
 
 import java.sql.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import Model.Ficha;
 
 public class DatabaseManager {
@@ -51,6 +53,7 @@ public class DatabaseManager {
                         instructor_bilinguismo TEXT,
                         instructor_tecnico_2026 TEXT,
                         transversales_faltantes TEXT,
+                        transversales_vistas TEXT,
                         estado TEXT,
                         trimestre TEXT,
                         acuerdo TEXT,
@@ -79,9 +82,10 @@ public class DatabaseManager {
                     INSERT INTO FICHA (numero, nivel, aprendices, programa,
                         fecha_inicio, fecha_fin_lec, fecha_fin,
                         instructor_tecnico_2025, instructor_bilinguismo,
-                        instructor_tecnico_2026, transversales_faltantes, estado,
+                        instructor_tecnico_2026, transversales_faltantes,
+                        transversales_vistas, estado,
                         trimestre, acuerdo, evaluacion)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """;
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, f.getNumero());
@@ -94,13 +98,41 @@ public class DatabaseManager {
             ps.setString(8, f.getInstructorTecnico2025());
             ps.setString(9, f.getInstructorBilinguismo());
             ps.setString(10, f.getInstructorTecnico2026());
-            ps.setString(11, f.getTransversalesFaltantes());
-            ps.setString(12, f.getEstado() != null ? f.getEstado().getLabel() : "Desconocido");
-            ps.setString(13, f.getTrimestre()); // ← NUEVO
-            ps.setString(14, f.getAcuerdo()); // ← NUEVO
-            ps.setString(15, f.getEvaluacion()); // ← NUEVO
+           ps.setString(11, String.join(";", f.getTransversalesFaltantes()));
+            // Serializar transversalesVistas: "COMP1:INSTRUCTOR1;COMP2:INSTRUCTOR2"
+            ps.setString(12, serializarVistas(f.getTransversalesVistas()));
+            ps.setString(13, f.getEstado() != null ? f.getEstado().getLabel() : "Desconocido");
+            ps.setString(14, f.getTrimestre());
+            ps.setString(15, f.getAcuerdo());
+            ps.setString(16, f.getEvaluacion());
             ps.executeUpdate();
         }
+    }
+
+    /** Serializa Map<String,String> a "KEY1:VAL1;KEY2:VAL2" */
+    private String serializarVistas(Map<String, String> vistas) {
+        if (vistas == null || vistas.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : vistas.entrySet()) {
+            if (sb.length() > 0) sb.append(";");
+            sb.append(entry.getKey()).append(":").append(entry.getValue() != null ? entry.getValue() : "");
+        }
+        return sb.toString();
+    }
+
+    /** Deserializa "KEY1:VAL1;KEY2:VAL2" a Map<String,String> */
+    public static Map<String, String> deserializarVistas(String raw) {
+        Map<String, String> map = new LinkedHashMap<>();
+        if (raw == null || raw.isBlank()) return map;
+        for (String pair : raw.split(";")) {
+            int idx = pair.indexOf(':');
+            if (idx >= 0) {
+                map.put(pair.substring(0, idx), pair.substring(idx + 1));
+            } else {
+                map.put(pair, "");
+            }
+        }
+        return map;
     }
 
     public ResultSet obtenerFichas() throws SQLException {

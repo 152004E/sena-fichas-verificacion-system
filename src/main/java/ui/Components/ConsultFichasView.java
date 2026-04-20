@@ -32,7 +32,13 @@ public class ConsultFichasView extends VBox {
     private DashboardView dashboard;
     private FilteredList<Ficha> filtro;
     private Label estadoLabel;
-    
+
+    // View containers
+    private StackPane viewContainer;
+    private TableView<Ficha> table;
+    private ScrollPane gridScrollPane;
+    private FlowPane gridPane;
+
     // Referencias a los botones para actualizar contadores
     private ToggleButton toggleEjecucion;
     private ToggleButton toggleFinalizado;
@@ -72,7 +78,16 @@ public class ConsultFichasView extends VBox {
                 f.setInstructorTecnico2025(rs.getString("instructor_tecnico_2025"));
                 f.setInstructorBilinguismo(rs.getString("instructor_bilinguismo"));
                 f.setInstructorTecnico2026(rs.getString("instructor_tecnico_2026"));
-                f.setTransversalesFaltantes(rs.getString("transversales_faltantes"));
+                String tfStr = rs.getString("transversales_faltantes");
+                if (tfStr != null && !tfStr.trim().isEmpty()) {
+                    f.setTransversalesFaltantes(new ArrayList<>(List.of(tfStr.split(";"))));
+                } else {
+                    f.setTransversalesFaltantes(new ArrayList<>());
+                }
+                // Cargar transversales vistas desde BD
+                String tvStr = rs.getString("transversales_vistas");
+                f.setTransversalesVistas(DatabaseManager.deserializarVistas(tvStr));
+
                 f.setTrimestre(rs.getString("trimestre"));
                 f.setAcuerdo(rs.getString("acuerdo"));
                 f.setEvaluacion(rs.getString("evaluacion"));
@@ -215,17 +230,73 @@ public class ConsultFichasView extends VBox {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox headerRow = new HBox(12, estadoLabel, spacer, btnCargar);
+        FontIcon gridIcon = new FontIcon("fas-th-large");
+        gridIcon.setIconSize(14);
+        gridIcon.setIconColor(Color.web("#39A900"));
+        Button btnGrid = new Button("", gridIcon);
+        btnGrid.setStyle(
+                "-fx-background-color: #2a2d3a; -fx-background-radius: 6 0 0 6; -fx-padding: 6 12; -fx-cursor: hand;");
+
+        FontIcon listIcon = new FontIcon("fas-list");
+        listIcon.setIconSize(14);
+        listIcon.setIconColor(Color.web("#8b92a5"));
+        Button btnList = new Button("", listIcon);
+        btnList.setStyle(
+                "-fx-background-color: transparent; -fx-background-radius: 0 6 6 0; -fx-padding: 6 12; -fx-cursor: hand;");
+
+        HBox toggleBox = new HBox(btnGrid, btnList);
+        toggleBox.setStyle(
+                "-fx-background-color: #13161f; -fx-background-radius: 6; -fx-border-color: #2a2d3a; -fx-border-radius: 6;");
+
+        HBox headerRow = new HBox(12, estadoLabel, spacer, toggleBox, btnCargar);
         headerRow.setAlignment(Pos.CENTER_LEFT);
         headerRow.setPadding(new Insets(0, 16, 10, 16));
 
-        // Tabla
-        TableView<Ficha> table = buildTable();
+        viewContainer = new StackPane();
+        VBox.setVgrow(viewContainer, Priority.ALWAYS);
+
+        table = buildTable();
+
+        gridPane = new FlowPane(16, 16);
+        gridPane.setPadding(new Insets(10));
+        gridPane.setAlignment(Pos.TOP_LEFT);
+
+        gridScrollPane = new ScrollPane(gridPane);
+        gridScrollPane.setFitToWidth(true);
+        gridScrollPane.setStyle("-fx-background: #0f1117; -fx-border-color: transparent;");
+        gridScrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
         filtro = new FilteredList<>(fichas, p -> true);
         table.setItems(filtro);
-        VBox.setVgrow(table, Priority.ALWAYS);
 
-        VBox section = new VBox(10, headerRow, table);
+        filtro.addListener((javafx.collections.ListChangeListener.Change<? extends Ficha> c) -> {
+            actualizarGrid();
+        });
+
+        viewContainer.getChildren().add(gridScrollPane); // Por defecto mostramos grid
+        actualizarGrid();
+
+        btnGrid.setOnAction(e -> {
+            btnGrid.setStyle(
+                    "-fx-background-color: #2a2d3a; -fx-background-radius: 6 0 0 6; -fx-padding: 6 12; -fx-cursor: hand;");
+            gridIcon.setIconColor(Color.web("#39A900"));
+            btnList.setStyle(
+                    "-fx-background-color: transparent; -fx-background-radius: 0 6 6 0; -fx-padding: 6 12; -fx-cursor: hand;");
+            listIcon.setIconColor(Color.web("#8b92a5"));
+            viewContainer.getChildren().setAll(gridScrollPane);
+        });
+
+        btnList.setOnAction(e -> {
+            btnList.setStyle(
+                    "-fx-background-color: #2a2d3a; -fx-background-radius: 0 6 6 0; -fx-padding: 6 12; -fx-cursor: hand;");
+            listIcon.setIconColor(Color.web("#39A900"));
+            btnGrid.setStyle(
+                    "-fx-background-color: transparent; -fx-background-radius: 6 0 0 6; -fx-padding: 6 12; -fx-cursor: hand;");
+            gridIcon.setIconColor(Color.web("#8b92a5"));
+            viewContainer.getChildren().setAll(table);
+        });
+
+        VBox section = new VBox(10, headerRow, viewContainer);
         section.setPadding(new Insets(10, 16, 16, 16));
         VBox.setVgrow(section, Priority.ALWAYS);
         section.setStyle(DARK_BG);
@@ -428,7 +499,9 @@ public class ConsultFichasView extends VBox {
                         .append(ficha.getInstructorTecnico2025()).append("\t")
                         .append(ficha.getInstructorBilinguismo()).append("\t")
                         .append(ficha.getInstructorTecnico2026()).append("\t")
-                        .append(ficha.getTransversalesFaltantes());
+                        .append(ficha.getTransversalesFaltantes() != null
+                                ? String.join(" ", ficha.getTransversalesFaltantes())
+                                : "");
 
                 copiarAlPortapapeles(sb.toString());
             }
@@ -568,4 +641,130 @@ public class ConsultFichasView extends VBox {
         toggleTecnico.setText("Técnico (" + tecnico + ")");
     }
 
+    private void actualizarGrid() {
+        if (gridPane == null)
+            return;
+        gridPane.getChildren().clear();
+        for (Ficha f : filtro) {
+            gridPane.getChildren().add(buildCard(f));
+        }
+    }
+
+    private VBox buildCard(Ficha ficha) {
+        VBox card = new VBox(10);
+        card.setPadding(new Insets(16));
+        card.setStyle(
+                "-fx-background-color: #13161f; -fx-background-radius: 16; -fx-border-color: #2a2d3a; -fx-border-radius: 16; -fx-border-width: 1;");
+        card.setPrefWidth(300);
+
+        card.setOnMouseEntered(e -> card.setStyle(
+                "-fx-background-color: #1a1e2b; -fx-background-radius: 16; -fx-border-color: #39A900; -fx-border-radius: 16; -fx-border-width: 1; -fx-cursor: hand;"));
+        card.setOnMouseExited(e -> card.setStyle(
+                "-fx-background-color: #13161f; -fx-background-radius: 16; -fx-border-color: #2a2d3a; -fx-border-radius: 16; -fx-border-width: 1;"));
+
+        card.setOnMouseClicked(e -> mostrarModalDetalle(ficha));
+
+        Label idBadge = new Label(String.valueOf(ficha.getNumero()));
+        idBadge.setStyle(
+                "-fx-background-color: #1e2230; -fx-text-fill: #e8eaf0; -fx-padding: 4 10; -fx-background-radius: 20; -fx-font-weight: bold; -fx-font-size: 14px;");
+
+        Label statusBadge = new Label(ficha.getEstado().getLabel().toUpperCase());
+        String statusStyle = getStatusStyle(ficha.getEstado().getLabel());
+        statusBadge.setStyle(statusStyle);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        HBox topRow = new HBox(idBadge, spacer, statusBadge);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+
+        Label title = new Label(ficha.getPrograma() != null ? ficha.getPrograma() : "SIN PROGRAMA");
+        title.setWrapText(true);
+        title.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #e8eaf0;");
+        title.setMinHeight(40);
+        title.setAlignment(Pos.TOP_LEFT);
+
+        Label lblNivel = new Label(ficha.getNivel() != null ? ficha.getNivel().toUpperCase() : "N/A");
+        lblNivel.setStyle(
+                "-fx-background-color: #1e2230; -fx-text-fill: #8b92a5; -fx-padding: 3 8; -fx-background-radius: 10; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+        FontIcon userIcon = new FontIcon("fas-users");
+        userIcon.setIconColor(Color.web("#8b92a5"));
+        userIcon.setIconSize(10);
+        Label lblAprendices = new Label(ficha.getAprendices() + " Aprendices", userIcon);
+        lblAprendices.setStyle(
+                "-fx-background-color: #1e2230; -fx-text-fill: #8b92a5; -fx-padding: 3 8; -fx-background-radius: 10; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+        HBox badgesRow = new HBox(8, lblNivel, lblAprendices);
+
+        VBox instBox = new VBox(4);
+        instBox.getChildren().add(createInstLabel("Inst. 2025", ficha.getInstructorTecnico2025()));
+        instBox.getChildren().add(createInstLabel("Inst. 2026", ficha.getInstructorTecnico2026()));
+        instBox.getChildren().add(createInstLabel("Bilingüismo", ficha.getInstructorBilinguismo()));
+
+        HBox datesRow = new HBox(6);
+        datesRow.getChildren().addAll(
+                createDataBox("INICIO", ficha.getFechaInicio()),
+                createDataBox("FIN LEC", ficha.getFechaFinLec()),
+                createDataBox("FIN", ficha.getFechaFin()));
+
+        HBox acadRow = new HBox(6);
+        acadRow.getChildren().addAll(
+                createDataBox("TRIM", ficha.getTrimestre()),
+                createDataBox("ACUERDO", ficha.getAcuerdo()),
+                createDataBox("EVAL", ficha.getEvaluacion()));
+
+        HBox transRow = new HBox(15);
+        transRow.setStyle("-fx-border-color: #2a2d3a; -fx-border-width: 1 0 0 0; -fx-padding: 12 0 0 0;");
+
+        int vistasCount = ficha.getTransversalesVistas() != null ? ficha.getTransversalesVistas().size() : 0;
+        FontIcon vIcon = new FontIcon("fas-check-circle");
+        vIcon.setIconColor(Color.web("#39A900"));
+        Label lblVistas = new Label(vistasCount + " Vistas", vIcon);
+        lblVistas.setStyle("-fx-text-fill: #8b92a5; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+        List<String> faltList = ficha.getTransversalesFaltantes();
+        int faltCount = (faltList != null) ? faltList.size() : 0;
+        FontIcon fIcon = new FontIcon(faltCount > 0 ? "fas-exclamation-triangle" : "fas-check-circle");
+        fIcon.setIconColor(Color.web(faltCount > 0 ? "#e24b4a" : "#8b92a5"));
+        Label lblFalt = new Label(faltCount + " Faltantes", fIcon);
+        lblFalt.setStyle("-fx-text-fill: #8b92a5; -fx-font-size: 10px; -fx-font-weight: bold;");
+
+        transRow.getChildren().addAll(lblVistas, lblFalt);
+
+        card.getChildren().addAll(topRow, title, badgesRow, instBox, datesRow, acadRow, transRow);
+        return card;
+    }
+
+    private Label createInstLabel(String role, String name) {
+        FontIcon instIcon = new FontIcon("fas-user");
+        instIcon.setIconColor(Color.web("#8b92a5"));
+        instIcon.setIconSize(10);
+
+        String cleanName = (name == null || name.isBlank()) ? "Sin Asignar" : name;
+        Label lbl = new Label(role + ": " + cleanName, instIcon);
+        lbl.setStyle("-fx-text-fill: #8b92a5; -fx-font-size: 10px;");
+        return lbl;
+    }
+
+    private VBox createDataBox(String title, String value) {
+        VBox box = new VBox(2);
+        Label lblTitle = new Label(title);
+        lblTitle.setStyle("-fx-text-fill: #8b92a5; -fx-font-size: 8px; -fx-font-weight: bold;");
+        Label lblValue = new Label((value == null || value.isBlank()) ? "—" : value);
+        lblValue.setStyle("-fx-text-fill: #e8eaf0; -fx-font-size: 10px; -fx-font-weight: bold;");
+        box.getChildren().addAll(lblTitle, lblValue);
+        box.setStyle("-fx-background-color: #0f1117; -fx-padding: 6 8; -fx-background-radius: 8;");
+        HBox.setHgrow(box, Priority.ALWAYS);
+        return box;
+    }
+
+    private String getStatusStyle(String status) {
+        if (status.toLowerCase().contains("completa") || status.toLowerCase().contains("ok")) {
+            return "-fx-background-color: #1c3a12; -fx-text-fill: #5ed01a; -fx-background-radius: 20; -fx-padding: 4 10; -fx-font-size: 10px; -fx-font-weight: bold;";
+        } else if (status.toLowerCase().contains("error") || status.toLowerCase().contains("crítico")) {
+            return "-fx-background-color: #2d1515; -fx-text-fill: #e24b4a; -fx-background-radius: 20; -fx-padding: 4 10; -fx-font-size: 10px; -fx-font-weight: bold;";
+        } else {
+            return "-fx-background-color: #2a2010; -fx-text-fill: #d97706; -fx-background-radius: 20; -fx-padding: 4 10; -fx-font-size: 10px; -fx-font-weight: bold;";
+        }
+    }
 }
