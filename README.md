@@ -458,6 +458,8 @@ No estamos haciendo una app cualquiera. Estamos creando:
 
 Proyecto desarrollado para SENA
 
+mvn clean javafx:run
+
 ---
 
 **Última actualización:** Abril 2026

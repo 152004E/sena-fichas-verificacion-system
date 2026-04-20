@@ -92,6 +92,7 @@ public class ModalDetalleFicha extends StackPane {
         this.getChildren().add(modal);
     }
 
+    @SuppressWarnings("deprecation")
     private VBox buildCardVistas() {
         Label iconVistas = new Label("✔");
         iconVistas.setStyle(
@@ -146,7 +147,7 @@ public class ModalDetalleFicha extends StackPane {
             }
         });
 
-        tableVistas.getColumns().addAll(c1, c2);
+        tableVistas.getColumns().addAll(List.of(c1, c2));
         tableVistas.setItems(
                 FXCollections.observableArrayList(
                         ficha.getTransversalesVistas().keySet()));
@@ -159,6 +160,7 @@ public class ModalDetalleFicha extends StackPane {
         return cardVistas;
     }
 
+    @SuppressWarnings("deprecation")
     private VBox buildCardFaltantes() {
         Label iconFalt = new Label("✖");
         iconFalt.setStyle(
@@ -228,7 +230,7 @@ public class ModalDetalleFicha extends StackPane {
             }
         });
 
-        tableFalt.getColumns().addAll(f1, f2);
+        tableFalt.getColumns().addAll(List.of(f1, f2));
 
         Label infoIcon = new Label("ℹ");
         infoIcon.setStyle("-fx-text-fill: #39A900; -fx-font-size: 14px;");

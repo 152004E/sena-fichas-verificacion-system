@@ -14,8 +14,8 @@ import java.util.regex.Pattern;
 /**
  * Descarga el reporte XLS de aprendices desde SOFIA Plus.
  *
- * FLUJO (7 pasos obligatorios):
- *   Paso 0 — POST /sofia/home/principal.faces      → iniciar sesión
+ * FLUJO (6 pasos obligatorios):
+ *   Paso 0 — GET  /sofia/home/principal.faces      → inicializa UIViewRoot de la sesión
  *   Paso 1 — GET  /reporteAprendices.faces         → HTML con ViewState + conversationContext
  *   Paso 2 — GET  /modalFicha.faces                → modal inicial con nuevo conversationContext
  *   Paso 3 — POST /modalFicha.faces (búsqueda)    → POST primera búsqueda de ficha
@@ -90,14 +90,15 @@ public class SofiaReporteService {
 
         // ── Paso 0: Navegar a HOME para asegurar sesión en contexto de la app ──
         notificar(numeroFicha, 0, 1, "Paso 0/6 — Inicializando sesión en la aplicación...", true);
-        System.out.println("DEBUG Paso 0: POST HOME " + HOME_URL);
-        // POST con body vacío a HOME para asegurar que la sesión se propaga al contexto /sofia/
-        // CRÍTICO: Debe ser POST, no GET. El navegador lo hace automáticamente después del login.
-        loginService.doPost(HOME_URL, new HashMap<>());
-        System.out.println("DEBUG Paso 0: HOME POST completed");
-        
-        // ── Pausa más larga para que se estabilice la sesión ────────────────
-        Thread.sleep(2500);
+        System.out.println("DEBUG Paso 0: GET HOME " + HOME_URL);
+        // CORRECCIÓN: Debe ser GET, no POST. Un POST vacío a HOME genera un error JSF
+        // que corrompe el ViewState de la sesión. El GET inicializa el UIViewRoot correctamente.
+        String htmlHome = loginService.doGet(HOME_URL);
+        System.out.println("DEBUG Paso 0: HOME status ok, body length=" + htmlHome.length());
+        System.out.println("DEBUG Paso 0 fragment: " + htmlHome.substring(0, Math.min(200, htmlHome.length())));
+
+        // ── Pausa para que se estabilice la sesión ───────────────────────────
+        Thread.sleep(2000);
 
         // ── Paso 1: GET página del reporte ───────────────────────
         notificar(numeroFicha, 0, 1, "Paso 1/6 — Cargando página de reportes...", true);
@@ -110,10 +111,10 @@ public class SofiaReporteService {
         if (htmlReporte.contains("josso_login") || htmlReporte.contains("Redirects the user")) {
             System.out.println("WARN Paso 1: Sesión rechazada, reiniciando...");
             System.out.println("HTML: " + htmlReporte.substring(0, Math.min(300, htmlReporte.length())));
-            // Reintentar: hacer POST a HOME nuevamente
-            System.out.println("DEBUG Reintento: visitando HOME otra vez...");
-            loginService.doPost(HOME_URL, new HashMap<>());
-            Thread.sleep(1000);
+            // Reintento: GET a HOME para re-inicializar el UIViewRoot
+            System.out.println("DEBUG Reintento: visitando HOME (GET) otra vez...");
+            loginService.doGet(HOME_URL);
+            Thread.sleep(1500);
             htmlReporte = loginService.doGet(urlReportePaso1);
         }
         
@@ -130,16 +131,23 @@ public class SofiaReporteService {
         // ── Paso 2: GET modal inicial ────────────────────────────
         notificar(numeroFicha, 0, 1, "Paso 2/6 — Abriendo modal de fichas...", true);
         String urlModal = MODAL_URL_BASE + MODAL_QUERY_PARAMS + conversationContext1;
+        System.out.println("DEBUG Paso 2: GET " + urlModal);
         String htmlModal = loginService.doGet(urlModal);
         String viewState2 = SofiaLoginService.extraerViewState(htmlModal);
         String conversationContext2 = extraerConversationContext(htmlModal);
+        System.out.println("DEBUG Paso 2: viewState2 ok=" + !viewState2.isEmpty() + ", ctx2='" + conversationContext2 + "'");
+        if (viewState2.isEmpty()) {
+            System.out.println("DEBUG Paso 2 HTML fragment: " + htmlModal.substring(0, Math.min(500, htmlModal.length())));
+            throw new Exception("ViewState vacío en modal (Paso 2). Verifica el parámetro 'centro' en MODAL_QUERY_PARAMS.");
+        }
 
         // ── Paso 3: POST primer búsqueda en modal ────────────────
         notificar(numeroFicha, 0, 1, "Paso 3/6 — Buscando ficha " + numeroFicha + "...", true);
         String urlModalPost = MODAL_URL_BASE + "?conversationContext=" + conversationContext2;
         String htmlBusqueda = buscarFichaEnModal(numeroFicha, viewState2, urlModalPost);
         String viewState3 = SofiaLoginService.extraerViewState(htmlBusqueda);
-        String conversationContext3 = extraerConversationContext(htmlBusqueda);
+        // conversationContext del modal después de búsqueda — el POST de selección usa la misma URL
+        extraerConversationContext(htmlBusqueda); // registrado en log, resultado descartado intencionalmente
 
         // ── Paso 4: POST seleccionar ficha (confirmar búsqueda) ───
         notificar(numeroFicha, 0, 1, "Paso 4/6 — Seleccionando ficha...", true);
@@ -225,12 +233,18 @@ public class SofiaReporteService {
      * Busca: ?conversationContext=X donde X puede ser [a-z]
      */
     private static String extraerConversationContext(String html) {
-        Pattern p = Pattern.compile("conversationContext=([a-z]+)");
+        // CORRECCIÓN: Acepta alfanumérico ([a-zA-Z0-9]+). La versión anterior solo aceptaba
+        // letras minúsculas ([a-z]+), lo que hacía que contextos como "a1" o "b3" no se
+        // capturaran y el fallback "a" causara el Error 495 / ViewState vacío.
+        Pattern p = Pattern.compile("conversationContext=([a-zA-Z0-9]+)");
         Matcher m = p.matcher(html);
         if (m.find()) {
-            return m.group(1);
+            String ctx = m.group(1);
+            System.out.println("DEBUG conversationContext extraído: '" + ctx + "'");
+            return ctx;
         }
-        return "a"; // valor por defecto si no se encuentra
+        System.out.println("WARN conversationContext no encontrado en HTML, usando fallback 'a'");
+        return "a"; // fallback — si esto aparece en logs, revisar el HTML del paso anterior
     }
 
     /**

@@ -25,9 +25,12 @@ import java.util.regex.Pattern;
  */
 public class SofiaLoginService {
 
-    private static final String BASE_URL  = "http://senasofiaplus.edu.co";
-    private static final String LOGIN_URL = BASE_URL + "/sofia/login/login.faces";
-    private static final String JOSSO_URL = BASE_URL + "/josso/signon/login.do";
+    private static final String BASE_URL      = "http://senasofiaplus.edu.co";
+    // authpre es el subdominio de autenticación JOSSO — diferente al de la app
+    private static final String AUTH_BASE_URL = "http://authpre.senasofiaplus.edu.co";
+    private static final String LOGIN_URL     = BASE_URL + "/sofia/login/login.faces";
+    // CORRECCIÓN: endpoint real es usernamePasswordLogin.do en authpre, no login.do en raíz
+    private static final String JOSSO_URL     = AUTH_BASE_URL + "/josso/signon/usernamePasswordLogin.do";
 
     private final CookieManager cookieManager;
     private final HttpClient    httpClient;
@@ -95,28 +98,35 @@ public class SofiaLoginService {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .GET()
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept", "text/html,application/xhtml+xml")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "es-CO,es;q=0.9")
                 .timeout(Duration.ofSeconds(30))
                 .build();
         HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+        System.out.println("HTTP GET  " + url + "  →  STATUS " + resp.statusCode()
+                + "  |  BODY " + resp.body().length() + " chars"
+                + "  |  FINAL_URI " + resp.uri());
         return resp.body();
     }
 
     public String doPost(String url, Map<String, String> fields) throws Exception {
         String body = buildFormBody(fields);
-        // Para POST a HOME después del login, el Referer debe ser /sofia-public/
-        String referer = url.contains("/sofia/home/") ? BASE_URL + "/sofia-public/" : LOGIN_URL;
+        String referer = url.contains("/josso/") ? LOGIN_URL : BASE_URL + "/sofia/";
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .header("User-Agent", "Mozilla/5.0")
-                .header("Accept", "text/html,application/xhtml+xml,*/*")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "es-CO,es;q=0.9")
                 .header("Referer", referer)
                 .timeout(Duration.ofSeconds(30))
                 .build();
         HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.ISO_8859_1));
+        System.out.println("HTTP POST " + url + "  →  STATUS " + resp.statusCode()
+                + "  |  BODY " + resp.body().length() + " chars"
+                + "  |  FINAL_URI " + resp.uri());
         return resp.body();
     }
 
@@ -125,11 +135,15 @@ public class SofiaLoginService {
                 .uri(URI.create(url))
                 .POST(HttpRequest.BodyPublishers.ofString(rawBody, StandardCharsets.ISO_8859_1))
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .header("User-Agent", "Mozilla/5.0")
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
                 .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "es-CO,es;q=0.9")
                 .timeout(Duration.ofSeconds(60));
         headers.forEach(builder::header);
         HttpResponse<byte[]> resp = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofByteArray());
+        System.out.println("HTTP POST (bytes) " + url + "  →  STATUS " + resp.statusCode()
+                + "  |  BODY " + resp.body().length + " bytes"
+                + "  |  FINAL_URI " + resp.uri());
         return resp.body();
     }
 

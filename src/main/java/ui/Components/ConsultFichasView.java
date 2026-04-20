@@ -44,8 +44,6 @@ public class ConsultFichasView extends VBox {
     }
 
     private static final String DARK_BG = "-fx-background-color: #0f1117;";
-    private static final String CARD_BG = "-fx-background-color: #13161f; -fx-background-radius: 10;";
-    private static final String BORDER_SEP = "-fx-border-color: #2a2d3a; -fx-border-width: 0 0 1 0;";
 
     public ConsultFichasView() {
         setStyle(DARK_BG);
@@ -371,13 +369,13 @@ public class ConsultFichasView extends VBox {
         TableColumn<Ficha, Integer> colApr = col("Aprendices", 100);
         colApr.setCellValueFactory(new PropertyValueFactory<>("aprendices"));
 
-        table.getColumns().addAll(
+        table.getColumns().addAll(List.of(
                 colNum, colProg, colNivel,
                 colInicio, colFinLec, colFin,
                 colEstado, colTrimestre, colAcuerdo, colEvaluacion,
                 colI25, colBil, colI26, colApr,
                 colDetalle // 👈 NUEVA COLUMNA
-        );
+        ));
 
         // Estilo de filas
         table.setRowFactory(tv -> {
@@ -401,9 +399,12 @@ public class ConsultFichasView extends VBox {
         copyCell.setOnAction(e -> {
             Ficha ficha = table.getSelectionModel().getSelectedItem();
             if (ficha != null) {
-                TablePosition<Ficha, ?> pos = table.getFocusModel().getFocusedCell();
+                @SuppressWarnings("rawtypes")
+                TablePosition pos = table.getFocusModel().getFocusedCell();
                 if (pos != null) {
-                    Object cellValue = pos.getTableColumn().getCellData(ficha);
+                    @SuppressWarnings("rawtypes")
+                    TableColumn col = pos.getTableColumn();
+                    Object cellValue = col.getCellData(ficha);
                     copiarAlPortapapeles(cellValue != null ? cellValue.toString() : "");
                 }
             }

@@ -58,12 +58,7 @@ public void show(Stage stage) {
         }
     }
 
-    private void onSearch(String term) {
-        if (consultFichasView != null) {
-            navigateTo("consult");
-            consultFichasView.applySearch(term);
-        }
-    }
+    // onSearch method removed (unused locally)
 
     // ── Lazy getters ────────────────────────────────────────────
     private DashboardView getDashboard() {
