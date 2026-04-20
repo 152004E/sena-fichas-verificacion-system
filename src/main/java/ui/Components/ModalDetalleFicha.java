@@ -152,6 +152,24 @@ public class ModalDetalleFicha extends StackPane {
                                 FXCollections.observableArrayList(
                                                 ficha.getTransversalesVistas().keySet()));
 
+                ContextMenu ctxVistas = new ContextMenu();
+                MenuItem copyCellV = new MenuItem("📋 Copiar celda");
+                copyCellV.setOnAction(e -> {
+                        String selected = tableVistas.getSelectionModel().getSelectedItem();
+                        if (selected != null) {
+                                @SuppressWarnings("rawtypes")
+                                TablePosition pos = tableVistas.getFocusModel().getFocusedCell();
+                                if (pos != null) {
+                                        @SuppressWarnings("rawtypes")
+                                        TableColumn col = pos.getTableColumn();
+                                        Object cellValue = col.getCellData(selected);
+                                        copiarAlPortapapeles(cellValue != null ? cellValue.toString() : "");
+                                }
+                        }
+                });
+                ctxVistas.getItems().add(copyCellV);
+                tableVistas.setContextMenu(ctxVistas);
+
                 VBox cardVistas = new VBox(12, hVistas, tableVistas);
                 cardVistas.setPadding(new Insets(16));
                 cardVistas.setStyle("-fx-background-color: #1a2332; -fx-background-radius: 16;");
@@ -230,6 +248,24 @@ public class ModalDetalleFicha extends StackPane {
 
                 tableFalt.getColumns().addAll(List.of(f1, f2));
 
+                ContextMenu ctxFalt = new ContextMenu();
+                MenuItem copyCellF = new MenuItem("📋 Copiar celda");
+                copyCellF.setOnAction(e -> {
+                        String selected = tableFalt.getSelectionModel().getSelectedItem();
+                        if (selected != null) {
+                                @SuppressWarnings("rawtypes")
+                                TablePosition pos = tableFalt.getFocusModel().getFocusedCell();
+                                if (pos != null) {
+                                        @SuppressWarnings("rawtypes")
+                                        TableColumn col = pos.getTableColumn();
+                                        Object cellValue = col.getCellData(selected);
+                                        copiarAlPortapapeles(cellValue != null ? cellValue.toString() : "");
+                                }
+                        }
+                });
+                ctxFalt.getItems().add(copyCellF);
+                tableFalt.setContextMenu(ctxFalt);
+
                 Label infoIcon = new Label("ℹ");
                 infoIcon.setStyle("-fx-text-fill: #39A900; -fx-font-size: 14px;");
                 Label infoText = new Label("Las competencias faltantes serán asignadas en el próximo trimestre.");
@@ -300,5 +336,12 @@ public class ModalDetalleFicha extends StackPane {
                 if (root != null) {
                         root.getChildren().remove(this);
                 }
+        }
+
+        private void copiarAlPortapapeles(String texto) {
+                javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+                javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+                content.putString(texto);
+                clipboard.setContent(content);
         }
 }

@@ -23,6 +23,8 @@ import java.sql.ResultSet;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.kordamp.ikonli.javafx.FontIcon;
 
@@ -32,6 +34,10 @@ public class ConsultFichasView extends VBox {
     private DashboardView dashboard;
     private FilteredList<Ficha> filtro;
     private Label estadoLabel;
+
+    // Cache de tarjetas
+    private final Map<Integer, VBox> cardCache = new HashMap<>();
+    private List<Integer> lastRenderedIds = new ArrayList<>();
 
     // View containers
     private StackPane viewContainer;
@@ -644,23 +650,53 @@ public class ConsultFichasView extends VBox {
     private void actualizarGrid() {
         if (gridPane == null)
             return;
+
+        List<Integer> currentIds = filtro.stream()
+                .map(Ficha::getNumero)
+                .collect(java.util.stream.Collectors.toList());
+
+        if (currentIds.equals(lastRenderedIds)) {
+            return;
+        }
+
+        lastRenderedIds = currentIds;
         gridPane.getChildren().clear();
+
         for (Ficha f : filtro) {
-            gridPane.getChildren().add(buildCard(f));
+            gridPane.getChildren().add(
+                    cardCache.computeIfAbsent(f.getNumero(), id -> buildCard(f))
+            );
         }
     }
 
     private VBox buildCard(Ficha ficha) {
         VBox card = new VBox(10);
         card.setPadding(new Insets(16));
-        card.setStyle(
-                "-fx-background-color: #13161f; -fx-background-radius: 16; -fx-border-color: #2a2d3a; -fx-border-radius: 16; -fx-border-width: 1;");
         card.setPrefWidth(300);
 
-        card.setOnMouseEntered(e -> card.setStyle(
-                "-fx-background-color: #1a1e2b; -fx-background-radius: 16; -fx-border-color: #39A900; -fx-border-radius: 16; -fx-border-width: 1; -fx-cursor: hand;"));
-        card.setOnMouseExited(e -> card.setStyle(
-                "-fx-background-color: #13161f; -fx-background-radius: 16; -fx-border-color: #2a2d3a; -fx-border-radius: 16; -fx-border-width: 1;"));
+        javafx.scene.layout.Background bgNormal = new javafx.scene.layout.Background(
+                new javafx.scene.layout.BackgroundFill(Color.web("#13161f"), new javafx.scene.layout.CornerRadii(16), Insets.EMPTY));
+        javafx.scene.layout.Background bgHover = new javafx.scene.layout.Background(
+                new javafx.scene.layout.BackgroundFill(Color.web("#1a1e2b"), new javafx.scene.layout.CornerRadii(16), Insets.EMPTY));
+        javafx.scene.layout.Border borderNormal = new javafx.scene.layout.Border(
+                new javafx.scene.layout.BorderStroke(Color.web("#2a2d3a"), javafx.scene.layout.BorderStrokeStyle.SOLID,
+                        new javafx.scene.layout.CornerRadii(16), new javafx.scene.layout.BorderWidths(1)));
+        javafx.scene.layout.Border borderHover = new javafx.scene.layout.Border(
+                new javafx.scene.layout.BorderStroke(Color.web("#39A900"), javafx.scene.layout.BorderStrokeStyle.SOLID,
+                        new javafx.scene.layout.CornerRadii(16), new javafx.scene.layout.BorderWidths(1)));
+
+        card.setBackground(bgNormal);
+        card.setBorder(borderNormal);
+
+        card.setOnMouseEntered(e -> {
+            card.setBackground(bgHover);
+            card.setBorder(borderHover);
+            card.setCursor(javafx.scene.Cursor.HAND);
+        });
+        card.setOnMouseExited(e -> {
+            card.setBackground(bgNormal);
+            card.setBorder(borderNormal);
+        });
 
         card.setOnMouseClicked(e -> mostrarModalDetalle(ficha));
 

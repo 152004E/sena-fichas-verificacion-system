@@ -89,14 +89,15 @@ public class ExcelReader {
                     if (celdaMateria == null)
                         continue;
 
-                    String materia = formatter.formatCellValue(celdaMateria).trim();
+                    String materia = getCellStringValue(celdaMateria).trim();
                     String instructor = (celdaInstructor != null)
-                            ? formatter.formatCellValue(celdaInstructor).trim()
+                            ? getCellStringValue(celdaInstructor).trim()
                             : "";
                     if (!materia.isEmpty()) {
                         vistas.put(materia, instructor);
                     }
                 }
+
                 ficha.setTransversalesVistas(vistas);
 
                 // ── 3. Calcular FALTANTES = TODAS - VISTAS (replicamos la fórmula Excel) ──
@@ -120,6 +121,27 @@ public class ExcelReader {
             }
         }
         return listaFichas;
+    }
+
+    private String getCellStringValue(Cell cell) {
+        if (cell == null)
+            return "";
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().trim();
+            case NUMERIC -> String.valueOf((int) cell.getNumericCellValue());
+            case FORMULA -> {
+                try {
+                    yield switch (cell.getCachedFormulaResultType()) {
+                        case STRING -> cell.getStringCellValue().trim();
+                        case NUMERIC -> String.valueOf((int) cell.getNumericCellValue());
+                        default -> "";
+                    };
+                } catch (Exception e) {
+                    yield "";
+                }
+            }
+            default -> "";
+        };
     }
 
     /**
