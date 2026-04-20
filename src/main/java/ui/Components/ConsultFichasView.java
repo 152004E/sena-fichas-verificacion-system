@@ -51,6 +51,12 @@ public class ConsultFichasView extends VBox {
     private ToggleButton toggleTecnologo;
     private ToggleButton toggleTecnico;
 
+    // Pagination fields
+    private static final int PAGE_SIZE = 50;
+    private int currentPage = 0;
+    private Label pageLabel;
+    private Button btnPrev, btnNext;
+
     public void setDashboard(DashboardView dashboard) {
         this.dashboard = dashboard;
     }
@@ -276,6 +282,7 @@ public class ConsultFichasView extends VBox {
         table.setItems(filtro);
 
         filtro.addListener((javafx.collections.ListChangeListener.Change<? extends Ficha> c) -> {
+            currentPage = 0;  // resetear al filtrar
             actualizarGrid();
         });
 
@@ -306,6 +313,32 @@ public class ConsultFichasView extends VBox {
         section.setPadding(new Insets(10, 16, 16, 16));
         VBox.setVgrow(section, Priority.ALWAYS);
         section.setStyle(DARK_BG);
+
+        // Barra de paginación
+        btnPrev = new Button("← Anterior");
+        btnNext = new Button("Siguiente →");
+        pageLabel = new Label("1 / 1");
+
+        String btnStyle = "-fx-background-color: #2a2d3a; -fx-text-fill: white; " +
+                "-fx-background-radius: 6; -fx-cursor: hand; -fx-padding: 6 14;";
+        btnPrev.setStyle(btnStyle);
+        btnNext.setStyle(btnStyle);
+        pageLabel.setStyle("-fx-text-fill: #8b92a5; -fx-font-size: 12px;");
+
+        btnPrev.setOnAction(e -> {
+            currentPage--;
+            actualizarGrid();
+        });
+        btnNext.setOnAction(e -> {
+            currentPage++;
+            actualizarGrid();
+        });
+
+        HBox pagination = new HBox(12, btnPrev, pageLabel, btnNext);
+        pagination.setAlignment(Pos.CENTER);
+        pagination.setPadding(new Insets(10, 0, 0, 0));
+
+        section.getChildren().add(pagination);
         return section;
     }
 
@@ -648,25 +681,29 @@ public class ConsultFichasView extends VBox {
     }
 
     private void actualizarGrid() {
-        if (gridPane == null)
-            return;
-
-        List<Integer> currentIds = filtro.stream()
-                .map(Ficha::getNumero)
-                .collect(java.util.stream.Collectors.toList());
-
-        if (currentIds.equals(lastRenderedIds)) {
-            return;
-        }
-
-        lastRenderedIds = currentIds;
+        if (gridPane == null) return;
         gridPane.getChildren().clear();
 
-        for (Ficha f : filtro) {
+        List<Ficha> all = new ArrayList<>(filtro);
+        int totalPages = Math.max(1, (int) Math.ceil((double) all.size() / PAGE_SIZE));
+        currentPage = Math.min(currentPage, totalPages - 1);
+        if (currentPage < 0) currentPage = 0;
+
+        int from = currentPage * PAGE_SIZE;
+        int to = Math.min(from + PAGE_SIZE, all.size());
+        List<Ficha> page = all.subList(from, to);
+
+        for (Ficha f : page) {
             gridPane.getChildren().add(
                     cardCache.computeIfAbsent(f.getNumero(), id -> buildCard(f))
             );
         }
+
+        // Actualiza controles de paginación
+        if (pageLabel != null)
+            pageLabel.setText((currentPage + 1) + " / " + totalPages);
+        if (btnPrev != null) btnPrev.setDisable(currentPage == 0);
+        if (btnNext != null) btnNext.setDisable(currentPage >= totalPages - 1);
     }
 
     private VBox buildCard(Ficha ficha) {
